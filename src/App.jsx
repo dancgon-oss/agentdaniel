@@ -87,6 +87,7 @@ export default function App() {
   const [reportMonth, setReportMonth] = useState(new Date().getMonth());
   const [reportYear, setReportYear] = useState(new Date().getFullYear());
   const [profSearch, setProfSearch] = useState("");
+  const [reportProfFilter, setReportProfFilter] = useState("");
 
   const weekDays = getWeekDays(currentDate);
 
@@ -209,7 +210,6 @@ export default function App() {
   // ── Report data ───────────────────────────────────────────────────────────
   const reportData = (() => {
     const rows = [];
-    let total = 0;
     Object.entries(bookings).forEach(([key, b]) => {
       const [day, roomId, hour] = key.split("_");
       const dt = new Date(day + "T12:00:00");
@@ -222,16 +222,21 @@ export default function App() {
       const room = rooms.find(r => r.id === parseInt(roomId));
       const dur = b.duration ?? 1;
       const price = (prices[roomId] || 0) * dur;
-      total += price;
       const statusObj = STATUSES.find(s => s.value === (b.status || "confirmed"));
       rows.push({ day, roomId: parseInt(roomId), hour, name: b.name, type: b.type, phone: b.phone, room: room?.name || "?", price, color: room?.color || "#888", duration: dur, status: b.status || "confirmed", statusLabel: statusObj?.label || "Confirmado" });
     });
     rows.sort((a, b) => (a.day + a.hour) < (b.day + b.hour) ? -1 : 1);
+    const filteredRows = reportProfFilter
+      ? rows.filter(r => r.name.toLowerCase().includes(reportProfFilter.toLowerCase()))
+      : rows;
+    const filteredTotal = filteredRows.reduce((sum, r) => sum + r.price, 0);
     const byRoom = {};
     rooms.forEach(r => { byRoom[r.id] = { name: r.name, color: r.color, count: 0, revenue: 0 }; });
-    rows.forEach(r => { if (byRoom[r.roomId]) { byRoom[r.roomId].count++; byRoom[r.roomId].revenue += r.price; } });
-    return { rows, total, byRoom };
+    filteredRows.forEach(r => { if (byRoom[r.roomId]) { byRoom[r.roomId].count++; byRoom[r.roomId].revenue += r.price; } });
+    return { rows: filteredRows, total: filteredTotal, byRoom };
   })();
+
+  const reportProfNames = [...new Set(Object.values(bookings).map(b => b.name))].sort();
 
   // ── Render helpers ────────────────────────────────────────────────────────
   const todayKey = toKey(new Date());
@@ -545,6 +550,21 @@ export default function App() {
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Filtro por profissional */}
+          <div style={{ marginBottom: 20, position: "relative", maxWidth: 360 }}>
+            <input value={reportProfFilter} onChange={e => setReportProfFilter(e.target.value)} list="report-prof-names"
+              placeholder="🔍  Buscar por profissional para ver valor no mês..."
+              style={{ width: "100%", border: "1.5px solid #e5e0d6", borderRadius: 10, padding: "10px 14px", fontSize: 13, background: "#fff", color: "#1a1a1a" }} />
+            <datalist id="report-prof-names">
+              {reportProfNames.map(n => <option key={n} value={n} />)}
+            </datalist>
+            {reportProfFilter && (
+              <div style={{ marginTop: 8, fontSize: 13, color: "#555" }}>
+                Total de <strong>{reportProfFilter}</strong> em {MONTH_NAMES[reportMonth]}: <strong style={{ color: "#16a34a" }}>R$ {reportData.total.toLocaleString("pt-BR")}</strong> ({reportData.rows.length} reserva{reportData.rows.length !== 1 ? "s" : ""})
+              </div>
+            )}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginBottom: 28 }}>
