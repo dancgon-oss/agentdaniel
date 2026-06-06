@@ -17,8 +17,6 @@ function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); 
 const DEFAULT_ROOMS = [
   { id: 1, name: "Sala 01", color: "#16A34A" },
   { id: 2, name: "Sala 02", color: "#2563EB" },
-  { id: 3, name: "Sala 03", color: "#9333EA" },
-  { id: 4, name: "Sala 04", color: "#EA580C" },
 ];
 const HOURS = Array.from({ length: 14 }, (_, i) => `${String(i + 7).padStart(2, "0")}:00`);
 const DURATIONS = [1, 2, 3, 4];
@@ -76,7 +74,7 @@ export default function App() {
   const [rooms, setRooms] = useState(() => load(STORAGE_KEYS.rooms, DEFAULT_ROOMS));
   const [bookings, setBookings] = useState(() => load(STORAGE_KEYS.bookings, {}));
   const [professionals, setProfessionals] = useState(() => load(STORAGE_KEYS.professionals, []));
-  const [prices, setPrices] = useState(() => load(STORAGE_KEYS.prices, { 1: 80, 2: 80, 3: 80, 4: 80 }));
+  const [prices, setPrices] = useState(() => load(STORAGE_KEYS.prices, { 1: 80, 2: 80 }));
 
   const [tab, setTab] = useState("agenda");
   const [currentDate, setCurrentDate] = useState(new Date());
