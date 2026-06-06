@@ -177,6 +177,51 @@ export default function App() {
     showToast("Reserva cancelada.", "err");
   }
 
+  // Repeats a professional's bookings from one month to the next, same day-of-month.
+  // Skips slots that already have a conflicting booking; returns counts for feedback.
+  function repeatProfessionalToNextMonth(profName, fromMonth, fromYear) {
+    const next = new Date(fromYear, fromMonth + 1, 1);
+    const targetMonth = next.getMonth();
+    const targetYear = next.getFullYear();
+    const sourceRows = Object.entries(bookings).filter(([key, b]) => {
+      const [day, roomId, hour] = key.split("_");
+      const dt = new Date(day + "T12:00:00");
+      if (dt.getMonth() !== fromMonth || dt.getFullYear() !== fromYear) return false;
+      if (b.name !== profName) return false;
+      const startIdx = hourToIndex(hour);
+      for (let i = startIdx - 1; i >= 0; i--) {
+        if (getBooking(day, parseInt(roomId), HOURS[i])) return false;
+      }
+      return true;
+    });
+
+    let added = 0, skipped = 0;
+    setBookings(prev => {
+      const n = { ...prev };
+      sourceRows.forEach(([key, b]) => {
+        const [day, roomIdStr, hour] = key.split("_");
+        const roomId = parseInt(roomIdStr);
+        const dt = new Date(day + "T12:00:00");
+        const targetDate = new Date(targetYear, targetMonth, dt.getDate());
+        if (targetDate.getMonth() !== targetMonth) { skipped++; return; } // dia não existe no mês seguinte
+        const targetDay = toKey(targetDate);
+        const dur = b.duration ?? 1;
+        const startIdx = hourToIndex(hour);
+
+        for (let i = startIdx; i < startIdx + dur; i++) {
+          const h = HOURS[i];
+          if (!h || n[bookingKey(targetDay, roomId, h)]) { skipped++; return; }
+        }
+        n[bookingKey(targetDay, roomId, hour)] = { ...b };
+        added++;
+      });
+      return n;
+    });
+
+    showToast(`${added} reserva${added !== 1 ? "s" : ""} repetida${added !== 1 ? "s" : ""} para ${MONTH_NAMES[targetMonth]}${skipped ? ` · ${skipped} ignorada${skipped !== 1 ? "s" : ""} por conflito` : ""}.`, added ? "ok" : "err");
+    if (added) { setReportMonth(targetMonth); setReportYear(targetYear); }
+  }
+
   // ── Professional helpers ──────────────────────────────────────────────────
   function saveProfessional() {
     if (!form.name?.trim()) return;
@@ -563,6 +608,17 @@ export default function App() {
             {reportProfFilter && (
               <div style={{ marginTop: 8, fontSize: 13, color: "#555" }}>
                 Total de <strong>{reportProfFilter}</strong> em {MONTH_NAMES[reportMonth]}: <strong style={{ color: "#16a34a" }}>R$ {reportData.total.toLocaleString("pt-BR")}</strong> ({reportData.rows.length} reserva{reportData.rows.length !== 1 ? "s" : ""})
+              </div>
+            )}
+            {reportProfFilter && reportData.rows.length > 0 && (
+              <button className="btn" onClick={() => repeatProfessionalToNextMonth(reportProfFilter, reportMonth, reportYear)}
+                style={{ marginTop: 10, background: "#1a1a1a", color: "#fff", padding: "9px 16px", borderRadius: 9, fontSize: 12, fontWeight: 600 }}>
+                🔁 Repetir agendamentos para {MONTH_NAMES[(reportMonth + 1) % 12]}
+              </button>
+            )}
+            {reportProfFilter && reportData.rows.length > 0 && (
+              <div style={{ fontSize: 11, color: "#bbb", marginTop: 6 }}>
+                Cria as mesmas reservas no mesmo dia/horário do próximo mês. Conflitos são ignorados — ajuste manualmente na agenda se precisar.
               </div>
             )}
           </div>
