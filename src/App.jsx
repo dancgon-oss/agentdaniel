@@ -19,7 +19,7 @@ const DEFAULT_ROOMS = [
   { id: 2, name: "Sala 02", color: "#2563EB" },
 ];
 const HOURS = Array.from({ length: 14 }, (_, i) => `${String(i + 7).padStart(2, "0")}:00`);
-const DURATIONS = [1, 2, 3, 4];
+const DURATIONS = Array.from({ length: HOURS.length - 1 }, (_, i) => i + 1);
 const SPECIALTIES = ["Psicólogo(a)", "Terapeuta", "Advogado(a)", "Consultor(a)", "Médico(a)", "Dentista", "Coach", "Nutricionista", "Fisioterapeuta", "Outro"];
 const STATUSES = [
   { value: "confirmed", label: "Confirmado", color: "#16a34a", bg: "#dcfce7" },
@@ -762,10 +762,10 @@ export default function App() {
             {/* Duration selector */}
             <div>
               <Label>Duração</Label>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {DURATIONS.map(d => (
                   <button key={d} className="btn" onClick={() => setForm(f => ({ ...f, duration: d }))}
-                    style={{ flex: 1, padding: "8px 0", borderRadius: 8, fontSize: 13, fontWeight: 600, background: (form.duration ?? 1) === d ? "#1a1a1a" : "#f0ede6", color: (form.duration ?? 1) === d ? "#fff" : "#555" }}>
+                    style={{ minWidth: 42, flex: "1 0 auto", padding: "8px 0", borderRadius: 8, fontSize: 13, fontWeight: 600, background: (form.duration ?? 1) === d ? "#1a1a1a" : "#f0ede6", color: (form.duration ?? 1) === d ? "#fff" : "#555" }}>
                     {d}h
                   </button>
                 ))}
