@@ -101,8 +101,11 @@ export default function App() {
   }, []);
 
   // ── Booking helpers ───────────────────────────────────────────────────────
-  function hourlyRateFor(roomId, profId) {
-    const prof = profId ? professionals.find(p => p.id === profId) : null;
+  function hourlyRateFor(roomId, profId, profName) {
+    let prof = profId ? professionals.find(p => p.id === profId) : null;
+    if (!prof && profName) {
+      prof = professionals.find(p => p.name.trim().toLowerCase() === profName.trim().toLowerCase());
+    }
     if (prof && prof.hourlyRate != null && prof.hourlyRate !== "") return prof.hourlyRate;
     return prices[roomId] || 0;
   }
@@ -271,7 +274,7 @@ export default function App() {
       }
       const room = rooms.find(r => r.id === parseInt(roomId));
       const dur = b.duration ?? 1;
-      const price = hourlyRateFor(parseInt(roomId), b.profId) * dur;
+      const price = hourlyRateFor(parseInt(roomId), b.profId, b.name) * dur;
       const statusObj = STATUSES.find(s => s.value === (b.status || "confirmed"));
       rows.push({ day, roomId: parseInt(roomId), hour, name: b.name, type: b.type, phone: b.phone, room: room?.name || "?", price, color: room?.color || "#888", duration: dur, status: b.status || "confirmed", statusLabel: statusObj?.label || "Confirmado" });
     });
@@ -780,7 +783,7 @@ export default function App() {
               </div>
               {(form.duration ?? 1) > 1 && (
                 <div style={{ fontSize: 11, color: "#aaa", marginTop: 5, fontFamily: "'JetBrains Mono',monospace" }}>
-                  Valor total: R$ {(hourlyRateFor(form.roomId, form.profId) * (form.duration ?? 1)).toLocaleString("pt-BR")}
+                  Valor total: R$ {(hourlyRateFor(form.roomId, form.profId, form.name) * (form.duration ?? 1)).toLocaleString("pt-BR")}
                 </div>
               )}
             </div>
