@@ -101,6 +101,11 @@ export default function App() {
   }, []);
 
   // ── Booking helpers ───────────────────────────────────────────────────────
+  function hourlyRateFor(roomId, profId) {
+    const prof = profId ? professionals.find(p => p.id === profId) : null;
+    if (prof && prof.hourlyRate != null && prof.hourlyRate !== "") return prof.hourlyRate;
+    return prices[roomId] || 0;
+  }
   function bookingKey(day, roomId, hour) { return `${day}_${roomId}_${hour}`; }
   function getBooking(day, roomId, hour) { return bookings[bookingKey(day, roomId, hour)] || null; }
 
@@ -266,7 +271,7 @@ export default function App() {
       }
       const room = rooms.find(r => r.id === parseInt(roomId));
       const dur = b.duration ?? 1;
-      const price = (prices[roomId] || 0) * dur;
+      const price = hourlyRateFor(parseInt(roomId), b.profId) * dur;
       const statusObj = STATUSES.find(s => s.value === (b.status || "confirmed"));
       rows.push({ day, roomId: parseInt(roomId), hour, name: b.name, type: b.type, phone: b.phone, room: room?.name || "?", price, color: room?.color || "#888", duration: dur, status: b.status || "confirmed", statusLabel: statusObj?.label || "Confirmado" });
     });
@@ -556,6 +561,9 @@ export default function App() {
                     <div style={{ fontSize: 12, color: "#aaa" }}>{p.specialty}</div>
                   </div>
                 </div>
+                {p.hourlyRate != null && p.hourlyRate !== "" && (
+                  <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginBottom: 4 }}>💰 R$ {p.hourlyRate}/h (valor próprio)</div>
+                )}
                 {p.phone && <div style={{ fontSize: 12, color: "#888", fontFamily: "'JetBrains Mono',monospace", marginBottom: 4 }}>📱 {p.phone}</div>}
                 {p.email && <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>✉️ {p.email}</div>}
                 {p.notes && <div style={{ fontSize: 11, color: "#bbb", marginTop: 8, borderTop: "1px solid #f0ede6", paddingTop: 8 }}>{p.notes}</div>}
@@ -772,7 +780,7 @@ export default function App() {
               </div>
               {(form.duration ?? 1) > 1 && (
                 <div style={{ fontSize: 11, color: "#aaa", marginTop: 5, fontFamily: "'JetBrains Mono',monospace" }}>
-                  Valor total: R$ {((prices[form.roomId] || 0) * (form.duration ?? 1)).toLocaleString("pt-BR")}
+                  Valor total: R$ {(hourlyRateFor(form.roomId, form.profId) * (form.duration ?? 1)).toLocaleString("pt-BR")}
                 </div>
               )}
             </div>
@@ -835,6 +843,11 @@ export default function App() {
             </div>
             <div><Label>Telefone / WhatsApp</Label><input value={form.phone || ""} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(11) 99999-9999" style={inputStyle} /></div>
             <div><Label>E-mail</Label><input value={form.email || ""} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="email@exemplo.com" style={inputStyle} /></div>
+            <div><Label>Valor por hora (R$) — opcional</Label>
+              <input type="number" value={form.hourlyRate ?? ""} onChange={e => setForm(f => ({ ...f, hourlyRate: e.target.value === "" ? null : +e.target.value }))}
+                placeholder="Deixe em branco para usar o valor da sala" style={inputStyle} />
+              <div style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>Se definido, este valor substitui o preço padrão da sala para este profissional.</div>
+            </div>
             <div><Label>Observações</Label><textarea value={form.notes || ""} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "none" }} /></div>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
