@@ -267,11 +267,6 @@ export default function App() {
       const [day, roomId, hour] = key.split("_");
       const dt = new Date(day + "T12:00:00");
       if (dt.getMonth() !== reportMonth || dt.getFullYear() !== reportYear) return;
-      // skip continuation slots — only count the start slot
-      const startIdx = hourToIndex(hour);
-      for (let i = startIdx - 1; i >= 0; i--) {
-        if (getBooking(day, parseInt(roomId), HOURS[i])) return;
-      }
       const room = rooms.find(r => r.id === parseInt(roomId));
       const dur = b.duration ?? 1;
       const price = hourlyRateFor(parseInt(roomId), b.profId, b.name) * dur;
