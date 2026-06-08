@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   professionals: "salas_professionals",
   rooms: "salas_rooms",
   prices: "salas_prices",
+  credentials: "salas_credentials",
 };
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -83,7 +84,121 @@ function exportCSV(rows, month, year) {
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
+// ─── Change password section ──────────────────────────────────────────────────
+function ChangePasswordSection() {
+  const [open, setOpen] = useState(false);
+  const [cur, setCur] = useState(""); const [n1, setN1] = useState(""); const [n2, setN2] = useState("");
+  const [newUser, setNewUser] = useState("");
+  const [msg, setMsg] = useState(null);
+
+  function save() {
+    const creds = load(STORAGE_KEYS.credentials, { user: "admin", pass: "geresala123" });
+    if (cur !== creds.pass) { setMsg({ ok: false, text: "Senha atual incorreta." }); return; }
+    if (n1.length < 4) { setMsg({ ok: false, text: "Nova senha deve ter no mínimo 4 caracteres." }); return; }
+    if (n1 !== n2) { setMsg({ ok: false, text: "As novas senhas não coincidem." }); return; }
+    const user = newUser.trim() || creds.user;
+    localStorage.setItem(STORAGE_KEYS.credentials, JSON.stringify({ user, pass: n1 }));
+    setMsg({ ok: true, text: "Acesso atualizado com sucesso!" });
+    setCur(""); setN1(""); setN2(""); setNewUser("");
+    setTimeout(() => { setMsg(null); setOpen(false); }, 2000);
+  }
+
+  return (
+    <div style={{ marginTop: 40, background: "#fff", borderRadius: 14, border: "1.5px solid #e5e0d6", padding: 24, maxWidth: 480 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>🔒 Acesso ao sistema</div>
+          <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>Altere usuário e senha de login</div>
+        </div>
+        <button onClick={() => { setOpen(o => !o); setMsg(null); }}
+          style={{ background: "#f5f3ee", border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+          {open ? "Cancelar" : "Alterar"}
+        </button>
+      </div>
+      {open && (
+        <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+          {[["Novo usuário (opcional)", newUser, setNewUser, "text", "Deixe em branco para manter o atual"],
+            ["Senha atual *", cur, setCur, "password", ""],
+            ["Nova senha *", n1, setN1, "password", "Mínimo 4 caracteres"],
+            ["Confirmar nova senha *", n2, setN2, "password", ""]
+          ].map(([label, val, set, type, hint]) => (
+            <div key={label}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 4, textTransform: "uppercase", letterSpacing: .8 }}>{label}</div>
+              <input type={type} value={val} onChange={e => { set(e.target.value); setMsg(null); }} placeholder={hint}
+                style={{ width: "100%", boxSizing: "border-box", border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "9px 12px", fontSize: 13 }} />
+            </div>
+          ))}
+          {msg && <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 7, background: msg.ok ? "#f0fdf4" : "#fff0f0", color: msg.ok ? "#16a34a" : "#dc2626" }}>{msg.ok ? "✅" : "⚠️"} {msg.text}</div>}
+          <button onClick={save} style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 9, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Salvar acesso</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Login screen ─────────────────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
+  const [err, setErr] = useState("");
+  const [show, setShow] = useState(false);
+
+  function attempt() {
+    const creds = load(STORAGE_KEYS.credentials, { user: "admin", pass: "geresala123" });
+    if (user.trim() === creds.user && pass === creds.pass) {
+      onLogin();
+    } else {
+      setErr("Usuário ou senha incorretos.");
+      setPass("");
+    }
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f5f3ee", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: "#fff", borderRadius: 18, padding: "44px 40px", width: 360, boxShadow: "0 8px 40px #0001", border: "1.5px solid #e5e0d6" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
+          <div style={{ width: 40, height: 40, background: "#1a1a1a", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏢</div>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>GereSala</div>
+            <div style={{ fontSize: 11, color: "#aaa" }}>Sublocação Profissional</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 20, color: "#333" }}>Acesso ao sistema</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: .8 }}>Usuário</div>
+            <input value={user} onChange={e => { setUser(e.target.value); setErr(""); }} onKeyDown={e => e.key === "Enter" && attempt()}
+              placeholder="Digite seu usuário" autoFocus
+              style={{ width: "100%", boxSizing: "border-box", border: "1.5px solid #e5e0d6", borderRadius: 9, padding: "11px 14px", fontSize: 14, outline: "none" }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: .8 }}>Senha</div>
+            <div style={{ position: "relative" }}>
+              <input value={pass} onChange={e => { setPass(e.target.value); setErr(""); }} onKeyDown={e => e.key === "Enter" && attempt()}
+                type={show ? "text" : "password"} placeholder="Digite sua senha"
+                style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${err ? "#dc2626" : "#e5e0d6"}`, borderRadius: 9, padding: "11px 40px 11px 14px", fontSize: 14, outline: "none" }} />
+              <button onClick={() => setShow(s => !s)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#aaa" }}>{show ? "🙈" : "👁"}</button>
+            </div>
+          </div>
+          {err && <div style={{ fontSize: 12, color: "#dc2626", background: "#fff0f0", padding: "8px 12px", borderRadius: 7 }}>⚠️ {err}</div>}
+          <button onClick={attempt} disabled={!user.trim() || !pass}
+            style={{ background: user.trim() && pass ? "#1a1a1a" : "#eee", color: user.trim() && pass ? "#fff" : "#aaa", border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 700, cursor: user.trim() && pass ? "pointer" : "default", marginTop: 4, transition: "all .15s" }}>
+            Entrar
+          </button>
+        </div>
+        <div style={{ marginTop: 24, fontSize: 11, color: "#ccc", textAlign: "center" }}>
+          Acesso restrito · GereSala CRM
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  const [loggedIn, setLoggedIn] = useState(() => sessionStorage.getItem("gs_session") === "1");
+
+  if (!loggedIn) return <LoginScreen onLogin={() => { sessionStorage.setItem("gs_session", "1"); setLoggedIn(true); }} />;
+
   const [rooms, setRooms] = useState(() => load(STORAGE_KEYS.rooms, DEFAULT_ROOMS));
   const [bookings, setBookings] = useState(() => load(STORAGE_KEYS.bookings, {}));
   const [professionals, setProfessionals] = useState(() => load(STORAGE_KEYS.professionals, []));
@@ -375,6 +490,10 @@ export default function App() {
             </button>
           ))}
         </div>
+        <button onClick={() => { sessionStorage.removeItem("gs_session"); setLoggedIn(false); }}
+          style={{ marginLeft: 16, background: "#f5f3ee", border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 600, color: "#666", cursor: "pointer" }}>
+          🔒 Sair
+        </button>
       </div>
 
       {/* ══════════════════════ AGENDA ══════════════════════ */}
@@ -785,6 +904,8 @@ export default function App() {
               </div>
             ))}
           </div>
+          {/* Alterar senha */}
+          <ChangePasswordSection />
         </div>
       )}
 
