@@ -196,8 +196,11 @@ function LoginScreen({ onLogin }) {
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(() => sessionStorage.getItem("gs_session") === "1");
-
   if (!loggedIn) return <LoginScreen onLogin={() => { sessionStorage.setItem("gs_session", "1"); setLoggedIn(true); }} />;
+  return <AppInner onLogout={() => { sessionStorage.removeItem("gs_session"); setLoggedIn(false); }} />;
+}
+
+function AppInner({ onLogout }) {
 
   const [rooms, setRooms] = useState(() => load(STORAGE_KEYS.rooms, DEFAULT_ROOMS));
   const [bookings, setBookings] = useState(() => load(STORAGE_KEYS.bookings, {}));
@@ -490,7 +493,7 @@ export default function App() {
             </button>
           ))}
         </div>
-        <button onClick={() => { sessionStorage.removeItem("gs_session"); setLoggedIn(false); }}
+        <button onClick={onLogout}
           style={{ marginLeft: 16, background: "#f5f3ee", border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 600, color: "#666", cursor: "pointer" }}>
           🔒 Sair
         </button>
