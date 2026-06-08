@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   rooms: "salas_rooms",
   prices: "salas_prices",
   credentials: "salas_credentials",
+  financeiro: "salas_financeiro",
 };
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -84,6 +85,242 @@ function exportCSV(rows, month, year) {
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
+// ─── Financeiro tab ───────────────────────────────────────────────────────────
+const FIN_CATS_REC = ["Sublocação de sala", "Consulta avulsa", "Pacote mensal", "Outros"];
+const FIN_CATS_PAG = ["Aluguel", "Energia / Água", "Internet", "Material de escritório", "Manutenção", "Impostos / Taxas", "Salário / Comissão", "Outros"];
+
+function FinanceiroTab({ financeiro, setFinanceiro }) {
+  const today = new Date().toISOString().split("T")[0];
+  const [filtroTipo, setFiltroTipo] = useState("todos");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [filtroMes, setFiltroMes] = useState(() => today.slice(0, 7));
+  const [modal, setModal] = useState(null); // null | { mode:"new"|"edit", item }
+  const [form, setForm] = useState({});
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  const lista = financeiro.filter(i => {
+    if (filtroTipo !== "todos" && i.tipo !== filtroTipo) return false;
+    if (filtroStatus !== "todos" && i.status !== filtroStatus) return false;
+    if (filtroMes && !i.vencimento.startsWith(filtroMes)) return false;
+    return true;
+  }).sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+
+  const totalRec = financeiro.filter(i => i.tipo === "receber" && i.vencimento.startsWith(filtroMes)).reduce((s, i) => s + i.valor, 0);
+  const totalPag = financeiro.filter(i => i.tipo === "pagar" && i.vencimento.startsWith(filtroMes)).reduce((s, i) => s + i.valor, 0);
+  const totalRecPago = financeiro.filter(i => i.tipo === "receber" && i.status === "pago" && i.vencimento.startsWith(filtroMes)).reduce((s, i) => s + i.valor, 0);
+  const totalPagPago = financeiro.filter(i => i.tipo === "pagar" && i.status === "pago" && i.vencimento.startsWith(filtroMes)).reduce((s, i) => s + i.valor, 0);
+  const saldo = totalRecPago - totalPagPago;
+
+  function openNew(tipo) {
+    setForm({ tipo, descricao: "", valor: "", vencimento: today, categoria: tipo === "receber" ? FIN_CATS_REC[0] : FIN_CATS_PAG[0], status: "pendente", obs: "" });
+    setModal({ mode: "new" });
+  }
+
+  function openEdit(item) {
+    setForm({ ...item });
+    setModal({ mode: "edit" });
+  }
+
+  function save() {
+    if (!form.descricao?.trim() || !form.valor || !form.vencimento) return;
+    const item = { ...form, valor: parseFloat(form.valor) };
+    if (modal.mode === "new") {
+      setFinanceiro(f => [...f, { ...item, id: Date.now() }]);
+    } else {
+      setFinanceiro(f => f.map(x => x.id === item.id ? item : x));
+    }
+    setModal(null);
+  }
+
+  function toggleStatus(id) {
+    setFinanceiro(f => f.map(x => x.id === id ? { ...x, status: x.status === "pago" ? "pendente" : "pago" } : x));
+  }
+
+  function del(id) {
+    setFinanceiro(f => f.filter(x => x.id !== id));
+    setConfirmDel(null); setModal(null);
+  }
+
+  function statusColor(item) {
+    if (item.status === "pago") return { bg: "#f0fdf4", color: "#16a34a", label: "Pago" };
+    if (item.vencimento < today) return { bg: "#fff0f0", color: "#dc2626", label: "Vencido" };
+    return { bg: "#fffbeb", color: "#d97706", label: "Pendente" };
+  }
+
+  const [ym, setYm] = useState(filtroMes);
+  const mesLabel = (() => { const [y, m] = filtroMes.split("-"); return `${MONTH_NAMES[parseInt(m) - 1]} ${y}`; })();
+
+  return (
+    <div style={{ maxWidth: 960, margin: "32px auto", padding: "0 24px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 22, fontWeight: 700 }}>Financeiro</h2>
+          <div style={{ fontSize: 13, color: "#aaa" }}>Contas a pagar e a receber</div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => openNew("receber")}
+            style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            + A Receber
+          </button>
+          <button onClick={() => openNew("pagar")}
+            style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            + A Pagar
+          </button>
+        </div>
+      </div>
+
+      {/* Resumo cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: 14, marginBottom: 24 }}>
+        {[
+          { label: "A Receber", val: totalRec, recebido: totalRecPago, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
+          { label: "A Pagar", val: totalPag, recebido: totalPagPago, color: "#dc2626", bg: "#fff0f0", border: "#fecaca" },
+          { label: "Saldo (recebido − pago)", val: saldo, color: saldo >= 0 ? "#2563eb" : "#dc2626", bg: "#eff6ff", border: "#bfdbfe" },
+        ].map(c => (
+          <div key={c.label} style={{ background: c.bg, border: `1.5px solid ${c.border}`, borderRadius: 14, padding: "18px 20px" }}>
+            <div style={{ fontSize: 11, color: "#888", fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, marginBottom: 6 }}>{c.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: c.color }}>R$ {c.val.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+            {c.recebido !== undefined && <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>Recebido/pago: R$ {c.recebido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>}
+          </div>
+        ))}
+      </div>
+
+      {/* Filtros */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
+        <input type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}
+          style={{ border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#fff" }} />
+        {[["todos", "Todos"], ["receber", "A Receber"], ["pagar", "A Pagar"]].map(([v, l]) => (
+          <button key={v} onClick={() => setFiltroTipo(v)}
+            style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: "1.5px solid #e5e0d6", cursor: "pointer", background: filtroTipo === v ? "#1a1a1a" : "#fff", color: filtroTipo === v ? "#fff" : "#555" }}>{l}</button>
+        ))}
+        {["todos", "pendente", "pago"].map(v => (
+          <button key={v} onClick={() => setFiltroStatus(v)}
+            style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: "1.5px solid #e5e0d6", cursor: "pointer", background: filtroStatus === v ? "#555" : "#fff", color: filtroStatus === v ? "#fff" : "#555" }}>
+            {v === "todos" ? "Todos status" : v === "pago" ? "✅ Pago" : "⏳ Pendente"}
+          </button>
+        ))}
+      </div>
+
+      {/* Lista */}
+      {lista.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "#ccc" }}>
+          <div style={{ fontSize: 40 }}>💰</div>
+          <div style={{ fontSize: 14, marginTop: 8 }}>Nenhum lançamento encontrado</div>
+        </div>
+      ) : (
+        <div style={{ background: "#fff", borderRadius: 14, border: "1.5px solid #e5e0d6", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#faf9f6" }}>
+                {["Tipo", "Descrição", "Categoria", "Vencimento", "Valor", "Status", ""].map(h => (
+                  <th key={h} style={{ padding: "11px 14px", textAlign: "left", fontSize: 11, color: "#aaa", fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, borderBottom: "1.5px solid #e5e0d6", fontFamily: "'JetBrains Mono',monospace" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map(item => {
+                const s = statusColor(item);
+                return (
+                  <tr key={item.id} style={{ borderBottom: "1px solid #f0ede6" }}>
+                    <td style={{ padding: "10px 14px" }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, background: item.tipo === "receber" ? "#f0fdf4" : "#fff0f0", color: item.tipo === "receber" ? "#16a34a" : "#dc2626" }}>
+                        {item.tipo === "receber" ? "↓ Receber" : "↑ Pagar"}
+                      </span>
+                    </td>
+                    <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 500 }}>{item.descricao}</td>
+                    <td style={{ padding: "10px 14px", fontSize: 12, color: "#888" }}>{item.categoria}</td>
+                    <td style={{ padding: "10px 14px", fontSize: 12, fontFamily: "'JetBrains Mono',monospace", color: item.vencimento < today && item.status !== "pago" ? "#dc2626" : "#555" }}>
+                      {item.vencimento.split("-").reverse().join("/")}
+                    </td>
+                    <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 700, color: item.tipo === "receber" ? "#16a34a" : "#dc2626" }}>
+                      R$ {parseFloat(item.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <button onClick={() => toggleStatus(item.id)}
+                        style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: s.bg, color: s.color }}>
+                        {s.label}
+                      </button>
+                    </td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <button onClick={() => openEdit(item)} style={{ background: "#f5f3ee", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", color: "#555" }}>✏️ Editar</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Modal novo/editar */}
+      {modal && (
+        <ModalOverlay onClose={() => setModal(null)}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ fontSize: 17, fontWeight: 700 }}>
+              {modal.mode === "new" ? (form.tipo === "receber" ? "Nova Conta a Receber" : "Nova Conta a Pagar") : "Editar Lançamento"}
+            </div>
+            <button onClick={() => setModal(null)} style={{ fontSize: 22, color: "#ccc", background: "transparent", border: "none", cursor: "pointer" }}>×</button>
+          </div>
+          {confirmDel ? (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div style={{ fontSize: 14, marginBottom: 20 }}>Excluir este lançamento?</div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <button onClick={() => setConfirmDel(null)} style={{ padding: "9px 20px", borderRadius: 8, background: "#f0ede6", border: "none", cursor: "pointer", fontWeight: 600 }}>Cancelar</button>
+                <button onClick={() => del(form.id)} style={{ padding: "9px 20px", borderRadius: 8, background: "#dc2626", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600 }}>Excluir</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+              <div>
+                <Label>Tipo</Label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[["receber", "↓ A Receber"], ["pagar", "↑ A Pagar"]].map(([v, l]) => (
+                    <button key={v} onClick={() => setForm(f => ({ ...f, tipo: v, categoria: v === "receber" ? FIN_CATS_REC[0] : FIN_CATS_PAG[0] }))}
+                      style={{ flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13,
+                        background: form.tipo === v ? (v === "receber" ? "#16a34a" : "#dc2626") : "#f0ede6",
+                        color: form.tipo === v ? "#fff" : "#555" }}>{l}</button>
+                  ))}
+                </div>
+              </div>
+              <div><Label>Descrição *</Label><input value={form.descricao || ""} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Aluguel sala julho" style={inputStyle} /></div>
+              <div>
+                <Label>Categoria</Label>
+                <select value={form.categoria || ""} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))} style={inputStyle}>
+                  {(form.tipo === "receber" ? FIN_CATS_REC : FIN_CATS_PAG).map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 1 }}><Label>Valor (R$) *</Label><input type="number" value={form.valor || ""} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" style={inputStyle} /></div>
+                <div style={{ flex: 1 }}><Label>Vencimento *</Label><input type="date" value={form.vencimento || ""} onChange={e => setForm(f => ({ ...f, vencimento: e.target.value }))} style={inputStyle} /></div>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[["pendente", "⏳ Pendente"], ["pago", "✅ Pago"]].map(([v, l]) => (
+                    <button key={v} onClick={() => setForm(f => ({ ...f, status: v }))}
+                      style={{ flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13,
+                        background: form.status === v ? "#1a1a1a" : "#f0ede6", color: form.status === v ? "#fff" : "#555" }}>{l}</button>
+                  ))}
+                </div>
+              </div>
+              <div><Label>Observação</Label><textarea value={form.obs || ""} onChange={e => setForm(f => ({ ...f, obs: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "none" }} /></div>
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                {modal.mode === "edit" && (
+                  <button onClick={() => setConfirmDel(true)} style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", border: "1.5px solid #fecaca", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>🗑 Excluir</button>
+                )}
+                <button onClick={save} disabled={!form.descricao?.trim() || !form.valor || !form.vencimento}
+                  style={{ marginLeft: "auto", padding: "10px 24px", borderRadius: 9, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                    background: form.descricao?.trim() && form.valor && form.vencimento ? "#1a1a1a" : "#eee",
+                    color: form.descricao?.trim() && form.valor && form.vencimento ? "#fff" : "#aaa" }}>Salvar</button>
+              </div>
+            </div>
+          )}
+        </ModalOverlay>
+      )}
+    </div>
+  );
+}
+
 // ─── Change password section ──────────────────────────────────────────────────
 function ChangePasswordSection() {
   const [open, setOpen] = useState(false);
@@ -208,6 +445,7 @@ function AppInner({ onLogout }) {
   const [prices, setPrices] = useState(() => load(STORAGE_KEYS.prices, { 1: 80, 2: 80 }));
 
   const [tab, setTab] = useState("agenda");
+  const [financeiro, setFinanceiro] = useState(() => load(STORAGE_KEYS.financeiro, []));
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(toKey(new Date()));
   const [viewMode, setViewMode] = useState("day");
@@ -223,6 +461,7 @@ function AppInner({ onLogout }) {
   const weekDays = getWeekDays(currentDate);
 
   useEffect(() => { save(STORAGE_KEYS.bookings, bookings); }, [bookings]);
+  useEffect(() => { save(STORAGE_KEYS.financeiro, financeiro); }, [financeiro]);
   useEffect(() => { save(STORAGE_KEYS.professionals, professionals); }, [professionals]);
   useEffect(() => { save(STORAGE_KEYS.rooms, rooms); }, [rooms]);
   useEffect(() => { save(STORAGE_KEYS.prices, prices); }, [prices]);
@@ -486,7 +725,7 @@ function AppInner({ onLogout }) {
           </div>
         </div>
         <div style={{ display: "flex", gap: 2 }}>
-          {[["agenda", "📅 Agenda"], ["profissionais", "👤 Profissionais"], ["relatorio", "📊 Relatório"], ["configuracoes", "⚙️ Salas"]].map(([id, label]) => (
+          {[["agenda", "📅 Agenda"], ["profissionais", "👤 Profissionais"], ["relatorio", "📊 Relatório"], ["financeiro", "💰 Financeiro"], ["configuracoes", "⚙️ Salas"]].map(([id, label]) => (
             <button key={id} className="tab" onClick={() => setTab(id)}
               style={{ padding: "7px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === id ? 600 : 400, background: tab === id ? "#1a1a1a" : "transparent", color: tab === id ? "#fff" : "#666" }}>
               {label}
@@ -875,6 +1114,11 @@ function AppInner({ onLogout }) {
             </div>
           )}
         </div>
+      )}
+
+      {/* ══════════════════════ FINANCEIRO ══════════════════════ */}
+      {tab === "financeiro" && (
+        <FinanceiroTab financeiro={financeiro} setFinanceiro={setFinanceiro} />
       )}
 
       {/* ══════════════════════ CONFIGURAÇÕES ══════════════════════ */}
