@@ -36,6 +36,19 @@ function getWeekStart(d) {
   dt.setDate(dt.getDate() - (day === 0 ? 6 : day - 1)); return dt;
 }
 function addDays(d, n) { const dt = new Date(d); dt.setDate(dt.getDate() + n); return dt; }
+function addMonths(d, n) { const dt = new Date(d); dt.setMonth(dt.getMonth() + n); return dt; }
+function getMonthGrid(base) {
+  const year = base.getFullYear(), month = base.getMonth();
+  const first = new Date(year, month, 1);
+  const last  = new Date(year, month + 1, 0);
+  const startOffset = (first.getDay() + 6) % 7; // Mon=0
+  const endPad = (7 - ((startOffset + last.getDate()) % 7)) % 7;
+  const days = [];
+  for (let i = startOffset; i > 0; i--) days.push({ date: addDays(first, -i), curr: false });
+  for (let i = 1; i <= last.getDate(); i++) days.push({ date: new Date(year, month, i), curr: true });
+  for (let i = 1; i <= endPad; i++) days.push({ date: addDays(last, i), curr: false });
+  return days;
+}
 // Full week: Mon–Sun (7 days)
 function getWeekDays(base) {
   const s = getWeekStart(base);
@@ -415,19 +428,63 @@ export default function App() {
             <div style={{ background: "#fff", borderBottom: "1.5px solid #e5e0d6", padding: "10px 20px", display: "flex", gap: 8, alignItems: "center", flexShrink: 0, flexWrap: "wrap" }}>
               <button className="btn" onClick={() => { setCurrentDate(new Date()); setSelectedDay(toKey(new Date())); }}
                 style={{ background: "#f0ede6", padding: "6px 13px", borderRadius: 7, fontSize: 12, fontWeight: 500 }}>Hoje</button>
-              <button className="nav-btn btn" onClick={() => setCurrentDate(addDays(currentDate, -7))} style={{ padding: "6px 10px", borderRadius: 7, fontSize: 14 }}>‹</button>
-              <button className="nav-btn btn" onClick={() => setCurrentDate(addDays(currentDate, 7))} style={{ padding: "6px 10px", borderRadius: 7, fontSize: 14 }}>›</button>
-              <span style={{ fontSize: 13, color: "#777", fontFamily: "'JetBrains Mono',monospace", marginLeft: 4 }}>{monthLabel(weekDays[0])}</span>
+              <button className="nav-btn btn" onClick={() => setCurrentDate(viewMode === "month" ? addMonths(currentDate, -1) : addDays(currentDate, -7))} style={{ padding: "6px 10px", borderRadius: 7, fontSize: 14 }}>‹</button>
+              <button className="nav-btn btn" onClick={() => setCurrentDate(viewMode === "month" ? addMonths(currentDate, 1) : addDays(currentDate, 7))} style={{ padding: "6px 10px", borderRadius: 7, fontSize: 14 }}>›</button>
+              <span style={{ fontSize: 13, color: "#777", fontFamily: "'JetBrains Mono',monospace", marginLeft: 4 }}>{viewMode === "month" ? `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}` : monthLabel(weekDays[0])}</span>
               <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-                {[["day", "Dia"], ["week", "Semana"]].map(([v, l]) => (
+                {[["day", "Dia"], ["week", "Semana"], ["month", "Mês"]].map(([v, l]) => (
                   <button key={v} className="btn" onClick={() => setViewMode(v)}
                     style={{ background: viewMode === v ? "#1a1a1a" : "#f0ede6", color: viewMode === v ? "#fff" : "#555", padding: "6px 13px", borderRadius: 7, fontSize: 12, fontWeight: 500 }}>{l}</button>
                 ))}
               </div>
             </div>
 
+            {/* ── Month view ── */}
+            {viewMode === "month" && (() => {
+              const grid = getMonthGrid(currentDate);
+              const todayK = toKey(new Date());
+              return (
+                <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+                  {/* Weekday header */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
+                    {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map(d => (
+                      <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: "#bbb", padding: "4px 0", fontFamily: "'JetBrains Mono',monospace" }}>{d}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                    {grid.map(({ date, curr }, i) => {
+                      const dk = toKey(date);
+                      const isToday = dk === todayK;
+                      const isSel = dk === selectedDay;
+                      const dayBookings = Object.entries(bookings).filter(([k]) => k.startsWith(dk + "_"));
+                      const byRoom = rooms.map(r => ({
+                        color: r.color,
+                        count: dayBookings.filter(([k]) => k.includes(`_${r.id}_`)).length,
+                      }));
+                      return (
+                        <div key={i} onClick={() => { setSelectedDay(dk); setCurrentDate(date); setViewMode("day"); }}
+                          style={{ minHeight: 80, borderRadius: 10, border: isSel ? "2px solid #1a1a1a" : isToday ? "2px solid #16a34a" : "1.5px solid #e5e0d6", background: curr ? "#fff" : "#f9f8f5", cursor: "pointer", padding: "8px 10px", transition: "all .15s", opacity: curr ? 1 : 0.4 }}>
+                          <div style={{ fontSize: 13, fontWeight: isToday ? 700 : 500, color: isToday ? "#16a34a" : isSel ? "#1a1a1a" : "#555", marginBottom: 6 }}>{date.getDate()}</div>
+                          {dayBookings.length > 0 && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                              {byRoom.filter(r => r.count > 0).map((r, j) => (
+                                <div key={j} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                  <div style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
+                                  <span style={{ fontSize: 11, color: "#666" }}>{r.count} reserva{r.count > 1 ? "s" : ""}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Day tabs – full week Mon–Sun */}
-            <div style={{ display: "flex", background: "#faf9f6", borderBottom: "1.5px solid #e5e0d6", flexShrink: 0 }}>
+            {viewMode !== "month" && <div style={{ display: "flex", background: "#faf9f6", borderBottom: "1.5px solid #e5e0d6", flexShrink: 0 }}>
               <div style={{ width: 56, flexShrink: 0, borderRight: "1px solid #e5e0d6" }} />
               {weekDays.map(d => {
                 const ds = toKey(d);
@@ -443,10 +500,10 @@ export default function App() {
                   </div>
                 );
               })}
-            </div>
+            </div>}
 
             {/* Room headers */}
-            <div style={{ display: "flex", background: "#faf9f6", borderBottom: "1.5px solid #e5e0d6", flexShrink: 0, position: "sticky", top: 0, zIndex: 5 }}>
+            {viewMode !== "month" && <div style={{ display: "flex", background: "#faf9f6", borderBottom: "1.5px solid #e5e0d6", flexShrink: 0, position: "sticky", top: 0, zIndex: 5 }}>
               <div style={{ width: 56, flexShrink: 0, borderRight: "1px solid #e5e0d6" }} />
               {rooms.map(r => (
                 <div key={r.id} style={{ flex: 1, padding: "8px 12px", borderRight: "1px solid #e5e0d6", display: "flex", alignItems: "center", gap: 6, minWidth: viewMode === "week" ? 80 : 140 }}>
@@ -454,10 +511,10 @@ export default function App() {
                   <span style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>{r.name}</span>
                 </div>
               ))}
-            </div>
+            </div>}
 
             {/* Slots */}
-            <div style={{ overflowY: "auto" }}>
+            {viewMode !== "month" && <div style={{ overflowY: "auto" }}>
               {displayDays.map(day => {
                 const ds = toKey(day);
                 return (
@@ -512,7 +569,7 @@ export default function App() {
                   </div>
                 );
               })}
-            </div>
+            </div>}
           </div>
         </div>
       )}
