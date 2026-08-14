@@ -2,99 +2,987 @@ import { useState, useEffect, useCallback } from "react";
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 const STORAGE_KEYS = {
-  bookings: "salas_bookings",
-  professionals: "salas_professionals",
-  rooms: "salas_rooms",
-  prices: "salas_prices",
-  credentials: "salas_credentials",
-  financeiro: "salas_financeiro",
+  clientes: "dist_clientes",
+  produtos: "dist_produtos",
+  pedidos: "dist_pedidos",
+  fornecedores: "dist_fornecedores",
+  compras: "dist_compras",
+  financeiro: "dist_financeiro",
+  credentials: "dist_credentials",
+  empresa: "dist_empresa",
 };
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
   catch { return fallback; }
 }
-function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* storage unavailable */ } }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const DEFAULT_ROOMS = [
-  { id: 1, name: "Sala 01", color: "#16A34A" },
-  { id: 2, name: "Sala 02", color: "#2563EB" },
+const CATEGORIAS = ["Alimentos", "Bebidas", "Limpeza", "Higiene/Perfumaria", "Papelaria", "Eletrônicos", "Outros"];
+const UNIDADES = ["UN", "CX", "PCT", "KG", "L", "DZ", "FD"];
+const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MONTH_SHORT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+const PEDIDO_STATUS = [
+  { value: "orcamento", label: "Orçamento", color: "#7c3aed", bg: "#ede9fe" },
+  { value: "pedido", label: "Pedido Confirmado", color: "#d97706", bg: "#fef3c7" },
+  { value: "faturado", label: "Faturado", color: "#16a34a", bg: "#dcfce7" },
+  { value: "cancelado", label: "Cancelado", color: "#dc2626", bg: "#fff0f0" },
 ];
-const HOURS = Array.from({ length: 14 }, (_, i) => `${String(i + 7).padStart(2, "0")}:00`);
-const DURATIONS = Array.from({ length: HOURS.length - 1 }, (_, i) => i + 1);
-const SPECIALTIES = ["Psicólogo(a)", "Terapeuta", "Advogado(a)", "Consultor(a)", "Médico(a)", "Dentista", "Coach", "Nutricionista", "Fisioterapeuta", "Outro"];
-const STATUSES = [
-  { value: "confirmed", label: "Confirmado", color: "#16a34a", bg: "#dcfce7" },
-  { value: "pending",   label: "Pendente",   color: "#d97706", bg: "#fef3c7" },
-  { value: "waitlist",  label: "Lista de espera", color: "#7c3aed", bg: "#ede9fe" },
+const COMPRA_STATUS = [
+  { value: "pendente", label: "Pendente", color: "#d97706", bg: "#fef3c7" },
+  { value: "recebido", label: "Recebido", color: "#16a34a", bg: "#dcfce7" },
+  { value: "cancelado", label: "Cancelado", color: "#dc2626", bg: "#fff0f0" },
 ];
-const WEEKDAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const FIN_CATS_REC = ["Venda de mercadorias", "Outros recebimentos"];
+const FIN_CATS_PAG = ["Compra de mercadorias", "Fretes/Logística", "Salários/Comissões", "Aluguel", "Energia/Água", "Impostos/Taxas", "Outros"];
 
-// ─── Date helpers ─────────────────────────────────────────────────────────────
-function toKey(date) { return typeof date === "string" ? date : date.toISOString().split("T")[0]; }
-function getWeekStart(d) {
-  const dt = new Date(d); const day = dt.getDay();
-  dt.setDate(dt.getDate() - (day === 0 ? 6 : day - 1)); return dt;
-}
-function addDays(d, n) { const dt = new Date(d); dt.setDate(dt.getDate() + n); return dt; }
-function addMonths(d, n) { const dt = new Date(d); dt.setMonth(dt.getMonth() + n); return dt; }
-function getMonthGrid(base) {
-  const year = base.getFullYear(), month = base.getMonth();
-  const first = new Date(year, month, 1);
-  const last  = new Date(year, month + 1, 0);
-  const startOffset = (first.getDay() + 6) % 7; // Mon=0
-  const endPad = (7 - ((startOffset + last.getDate()) % 7)) % 7;
-  const days = [];
-  for (let i = startOffset; i > 0; i--) days.push({ date: addDays(first, -i), curr: false });
-  for (let i = 1; i <= last.getDate(); i++) days.push({ date: new Date(year, month, i), curr: true });
-  for (let i = 1; i <= endPad; i++) days.push({ date: addDays(last, i), curr: false });
-  return days;
-}
-// Full week: Mon–Sun (7 days)
-function getWeekDays(base) {
-  const s = getWeekStart(base);
-  return Array.from({ length: 7 }, (_, i) => addDays(s, i));
-}
-function formatBR(d) {
-  const dt = new Date(d + "T12:00:00");
-  return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}`;
-}
-function monthLabel(d) { return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`; }
-function hourToIndex(h) { return HOURS.indexOf(h); }
+// ─── Seed data ────────────────────────────────────────────────────────────────
+const DEFAULT_PRODUTOS = [
+  { id: 1, codigo: "1001", nome: "Arroz Branco Tipo 1 5kg", categoria: "Alimentos", unidade: "UN", precoCusto: 18.5, precoVenda: 24.9, estoque: 120, estoqueMinimo: 30, obs: "" },
+  { id: 2, codigo: "1002", nome: "Óleo de Soja 900ml", categoria: "Alimentos", unidade: "UN", precoCusto: 6.2, precoVenda: 8.9, estoque: 200, estoqueMinimo: 50, obs: "" },
+  { id: 3, codigo: "2001", nome: "Refrigerante Cola 2L", categoria: "Bebidas", unidade: "UN", precoCusto: 5.8, precoVenda: 7.9, estoque: 15, estoqueMinimo: 40, obs: "" },
+  { id: 4, codigo: "3001", nome: "Detergente Neutro 500ml", categoria: "Limpeza", unidade: "UN", precoCusto: 2.1, precoVenda: 3.5, estoque: 300, estoqueMinimo: 80, obs: "" },
+  { id: 5, codigo: "4001", nome: "Papel Higiênico 12 rolos", categoria: "Higiene/Perfumaria", unidade: "PCT", precoCusto: 14.0, precoVenda: 19.9, estoque: 8, estoqueMinimo: 20, obs: "" },
+];
+const DEFAULT_CLIENTES = [
+  { id: 1, razaoSocial: "Mercearia Bom Preço Ltda", nomeFantasia: "Bom Preço", cnpjCpf: "12.345.678/0001-90", telefone: "(11) 98888-1111", email: "contato@bompreco.com", cidade: "São Paulo", uf: "SP", endereco: "Rua das Flores, 123", limiteCredito: 5000, obs: "" },
+  { id: 2, razaoSocial: "Supermercado Dois Irmãos ME", nomeFantasia: "Dois Irmãos", cnpjCpf: "98.765.432/0001-10", telefone: "(11) 97777-2222", email: "financeiro@doisirmaos.com", cidade: "Guarulhos", uf: "SP", endereco: "Av. Central, 500", limiteCredito: 8000, obs: "" },
+];
+const DEFAULT_FORNECEDORES = [
+  { id: 1, razaoSocial: "Distribuidora Atacadão Central Ltda", cnpj: "11.222.333/0001-44", telefone: "(11) 3333-4444", email: "vendas@atacadaocentral.com", contato: "Carlos Mendes", obs: "" },
+];
 
-// ─── WhatsApp ─────────────────────────────────────────────────────────────────
-function openWhatsApp(phone, name, roomName, date, hour) {
-  const clean = phone.replace(/\D/g, "");
-  const full = clean.startsWith("55") ? clean : "55" + clean;
-  const msg = encodeURIComponent(`Olá ${name}! ✅ Sua reserva foi confirmada:\n📍 ${roomName}\n📅 ${date} às ${hour}\nQualquer dúvida, entre em contato. Obrigado!`);
-  window.open(`https://wa.me/${full}?text=${msg}`, "_blank");
+// ─── Format helpers ───────────────────────────────────────────────────────────
+function fmtBRL(v) { return `R$ ${(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
+function fmtDateBR(iso) { return iso ? iso.split("-").reverse().join("/") : "—"; }
+function todayISO() { return new Date().toISOString().split("T")[0]; }
+function monthKeyOf(iso) { return (iso || "").slice(0, 7); }
+function nextNumero(list, prefix) {
+  const nums = list.map(x => parseInt((x.numero || "").split("-")[1] || "0", 10));
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `${prefix}-${String(max + 1).padStart(4, "0")}`;
 }
 
-// ─── CSV Export ───────────────────────────────────────────────────────────────
-function exportCSV(rows, month, year) {
-  const header = ["Data", "Horário", "Duração (h)", "Sala", "Profissional", "Especialidade", "Status", "Valor"];
-  const lines = [header.join(";"), ...rows.map(r =>
-    [formatBR(r.day), r.hour, r.duration ?? 1, r.room, r.name, r.type, r.statusLabel || "—", `R$ ${r.price}`].join(";")
-  )];
-  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url;
-  a.download = `relatorio_${MONTH_NAMES[month]}_${year}.csv`;
-  a.click(); URL.revokeObjectURL(url);
+// ─── Shared UI atoms ──────────────────────────────────────────────────────────
+const inputStyle = { width: "100%", boxSizing: "border-box", border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, color: "#0f172a", background: "#f8fafc", display: "block" };
+const thStyle = { padding: "11px 14px", textAlign: "left", fontSize: 11, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, borderBottom: "1.5px solid #e2e8f0", fontFamily: "'JetBrains Mono',monospace", whiteSpace: "nowrap" };
+const tdStyle = { padding: "10px 14px", fontSize: 13, borderBottom: "1px solid #f1f5f9" };
+const cardBox = { background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14 };
+
+function Label({ children }) {
+  return <label style={{ fontSize: 11, color: "#94a3b8", display: "block", marginBottom: 5, textTransform: "uppercase", letterSpacing: .9, fontFamily: "'JetBrains Mono',monospace" }}>{children}</label>;
+}
+function Field({ label, children }) { return <div><Label>{label}</Label>{children}</div>; }
+
+function ModalOverlay({ children, onClose, small, wide }) {
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 16, overflowY: "auto" }}>
+      <div className="fade-up" onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 18, padding: 28, width: small ? 340 : wide ? 640 : 460, maxWidth: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.22)", border: "1.5px solid #e2e8f0" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+function ModalHeader({ title, sub, onClose }) {
+  return (
+    <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div>
+        <div style={{ fontSize: 17, fontWeight: 700 }}>{title}</div>
+        {sub && <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: "'JetBrains Mono',monospace", marginTop: 3 }}>{sub}</div>}
+      </div>
+      <button className="btn" onClick={onClose} style={{ fontSize: 22, color: "#cbd5e1", background: "transparent" }}>×</button>
+    </div>
+  );
+}
+function StatusBadge({ value, list }) {
+  const s = list.find(x => x.value === value) || list[0];
+  return <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6, background: s.bg, color: s.color, whiteSpace: "nowrap" }}>{s.label}</span>;
+}
+function EmptyState({ icon = "📭", text }) {
+  return <div style={{ textAlign: "center", padding: "60px 0", color: "#cbd5e1" }}><div style={{ fontSize: 40 }}>{icon}</div><div style={{ fontSize: 14, marginTop: 8, color: "#94a3b8" }}>{text}</div></div>;
+}
+function StatCard({ label, value, sub, color = "#2563EB", bg = "#eff6ff", border = "#bfdbfe" }) {
+  return (
+    <div style={{ background: bg, border: `1.5px solid ${border}`, borderRadius: 14, padding: "18px 20px" }}>
+      <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, color }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+function PageHeader({ title, sub, action }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+      <div>
+        <h2 style={{ fontSize: 22, fontWeight: 700 }}>{title}</h2>
+        <div style={{ fontSize: 13, color: "#94a3b8" }}>{sub}</div>
+      </div>
+      {action}
+    </div>
+  );
+}
+function PrimaryButton({ children, onClick, disabled, color = "#2563EB" }) {
+  return (
+    <button className="btn" onClick={onClick} disabled={disabled}
+      style={{ background: disabled ? "#e2e8f0" : color, color: disabled ? "#94a3b8" : "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 600, cursor: disabled ? "default" : "pointer" }}>
+      {children}
+    </button>
+  );
 }
 
-// ─── Main App ─────────────────────────────────────────────────────────────────
-// ─── Financeiro tab ───────────────────────────────────────────────────────────
-const FIN_CATS_REC = ["Sublocação de sala", "Consulta avulsa", "Pacote mensal", "Outros"];
-const FIN_CATS_PAG = ["Aluguel", "Energia / Água", "Internet", "Material de escritório", "Manutenção", "Impostos / Taxas", "Salário / Comissão", "Outros"];
+// ─── Items builder (used by Pedidos and Compras) ─────────────────────────────
+function ItemsBuilder({ produtos, itens, setItens, priceField }) {
+  const [prodId, setProdId] = useState("");
+  const [qtd, setQtd] = useState(1);
+  const [preco, setPreco] = useState("");
 
-function FinanceiroTab({ financeiro, setFinanceiro }) {
-  const today = new Date().toISOString().split("T")[0];
+  function addItem() {
+    if (!prodId || !qtd || qtd <= 0) return;
+    const p = produtos.find(x => x.id === +prodId);
+    if (!p) return;
+    const precoUnit = preco !== "" ? parseFloat(preco) : (p[priceField] || 0);
+    setItens(list => [...list, { produtoId: +prodId, qtd: +qtd, precoUnit }]);
+    setProdId(""); setQtd(1); setPreco("");
+  }
+  function removeItem(idx) { setItens(list => list.filter((_, i) => i !== idx)); }
+
+  const total = itens.reduce((s, it) => s + it.qtd * it.precoUnit, 0);
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ flex: "2 1 180px" }}>
+          <Label>Produto</Label>
+          <select value={prodId} onChange={e => { setProdId(e.target.value); setPreco(""); }} style={inputStyle}>
+            <option value="">— Selecionar —</option>
+            {produtos.map(p => <option key={p.id} value={p.id}>{p.codigo} · {p.nome}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: "0 1 80px" }}>
+          <Label>Qtd</Label>
+          <input type="number" min="1" value={qtd} onChange={e => setQtd(e.target.value)} style={inputStyle} />
+        </div>
+        <div style={{ flex: "0 1 110px" }}>
+          <Label>Preço unit.</Label>
+          <input type="number" step="0.01" value={preco} onChange={e => setPreco(e.target.value)}
+            placeholder={prodId ? String(produtos.find(x => x.id === +prodId)?.[priceField] ?? "") : "0,00"} style={inputStyle} />
+        </div>
+        <button className="btn" onClick={addItem} disabled={!prodId}
+          style={{ padding: "9px 16px", borderRadius: 8, background: prodId ? "#1e293b" : "#e2e8f0", color: prodId ? "#fff" : "#94a3b8", fontSize: 13, fontWeight: 600, border: "none", height: 37 }}>
+          + Adicionar
+        </button>
+      </div>
+
+      {itens.length === 0 ? (
+        <div style={{ fontSize: 12, color: "#cbd5e1", padding: "16px 0", textAlign: "center", border: "1.5px dashed #e2e8f0", borderRadius: 10 }}>Nenhum item adicionado</div>
+      ) : (
+        <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 10, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <tbody>
+              {itens.map((it, idx) => {
+                const p = produtos.find(x => x.id === it.produtoId);
+                return (
+                  <tr key={idx} style={{ borderBottom: idx < itens.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                    <td style={{ padding: "8px 12px", fontSize: 12.5 }}>{p?.nome || "?"}</td>
+                    <td style={{ padding: "8px 12px", fontSize: 12, color: "#94a3b8", whiteSpace: "nowrap" }}>{it.qtd} {p?.unidade}</td>
+                    <td style={{ padding: "8px 12px", fontSize: 12, color: "#94a3b8", whiteSpace: "nowrap" }}>{fmtBRL(it.precoUnit)}</td>
+                    <td style={{ padding: "8px 12px", fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap" }}>{fmtBRL(it.qtd * it.precoUnit)}</td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                      <button className="btn" onClick={() => removeItem(idx)} style={{ background: "transparent", color: "#dc2626", fontSize: 13 }}>✕</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div style={{ textAlign: "right", marginTop: 10, fontSize: 14, fontWeight: 700 }}>
+        Total: <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>{fmtBRL(total)}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Change password ──────────────────────────────────────────────────────────
+function ChangePasswordSection() {
+  const [open, setOpen] = useState(false);
+  const [cur, setCur] = useState(""); const [n1, setN1] = useState(""); const [n2, setN2] = useState("");
+  const [newUser, setNewUser] = useState("");
+  const [msg, setMsg] = useState(null);
+
+  function saveCreds() {
+    const creds = load(STORAGE_KEYS.credentials, { user: "admin", pass: "distri123" });
+    if (cur !== creds.pass) { setMsg({ ok: false, text: "Senha atual incorreta." }); return; }
+    if (n1.length < 4) { setMsg({ ok: false, text: "Nova senha deve ter no mínimo 4 caracteres." }); return; }
+    if (n1 !== n2) { setMsg({ ok: false, text: "As novas senhas não coincidem." }); return; }
+    const user = newUser.trim() || creds.user;
+    localStorage.setItem(STORAGE_KEYS.credentials, JSON.stringify({ user, pass: n1 }));
+    setMsg({ ok: true, text: "Acesso atualizado com sucesso!" });
+    setCur(""); setN1(""); setN2(""); setNewUser("");
+    setTimeout(() => { setMsg(null); setOpen(false); }, 2000);
+  }
+
+  return (
+    <div style={{ ...cardBox, padding: 24, maxWidth: 480 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>🔒 Acesso ao sistema</div>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>Altere usuário e senha de login</div>
+        </div>
+        <button onClick={() => { setOpen(o => !o); setMsg(null); }}
+          style={{ background: "#f1f5f9", border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+          {open ? "Cancelar" : "Alterar"}
+        </button>
+      </div>
+      {open && (
+        <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+          {[["Novo usuário (opcional)", newUser, setNewUser, "text", "Deixe em branco para manter o atual"],
+            ["Senha atual *", cur, setCur, "password", ""],
+            ["Nova senha *", n1, setN1, "password", "Mínimo 4 caracteres"],
+            ["Confirmar nova senha *", n2, setN2, "password", ""]
+          ].map(([label, val, set, type, hint]) => (
+            <Field key={label} label={label}>
+              <input type={type} value={val} onChange={e => { set(e.target.value); setMsg(null); }} placeholder={hint} style={inputStyle} />
+            </Field>
+          ))}
+          {msg && <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 7, background: msg.ok ? "#f0fdf4" : "#fff0f0", color: msg.ok ? "#16a34a" : "#dc2626" }}>{msg.ok ? "✅" : "⚠️"} {msg.text}</div>}
+          <button onClick={saveCreds} style={{ background: "#1e293b", color: "#fff", border: "none", borderRadius: 9, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Salvar acesso</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Login screen ─────────────────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
+  const [err, setErr] = useState("");
+  const [show, setShow] = useState(false);
+
+  function attempt() {
+    const creds = load(STORAGE_KEYS.credentials, { user: "admin", pass: "distri123" });
+    if (user.trim() === creds.user && pass === creds.pass) onLogin();
+    else { setErr("Usuário ou senha incorretos."); setPass(""); }
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: "#fff", borderRadius: 18, padding: "44px 40px", width: 360, boxShadow: "0 8px 40px #0004" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
+          <div style={{ width: 40, height: 40, background: "#2563EB", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>📦</div>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>DistriFlow</div>
+            <div style={{ fontSize: 11, color: "#94a3b8" }}>Gestão para Distribuidoras</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 20, color: "#334155" }}>Acesso ao sistema</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Field label="Usuário">
+            <input value={user} onChange={e => { setUser(e.target.value); setErr(""); }} onKeyDown={e => e.key === "Enter" && attempt()}
+              placeholder="Digite seu usuário" autoFocus style={inputStyle} />
+          </Field>
+          <Field label="Senha">
+            <div style={{ position: "relative" }}>
+              <input value={pass} onChange={e => { setPass(e.target.value); setErr(""); }} onKeyDown={e => e.key === "Enter" && attempt()}
+                type={show ? "text" : "password"} placeholder="Digite sua senha"
+                style={{ ...inputStyle, padding: "9px 40px 9px 12px", borderColor: err ? "#dc2626" : "#e2e8f0" }} />
+              <button onClick={() => setShow(s => !s)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#94a3b8" }}>{show ? "🙈" : "👁"}</button>
+            </div>
+          </Field>
+          {err && <div style={{ fontSize: 12, color: "#dc2626", background: "#fff0f0", padding: "8px 12px", borderRadius: 7 }}>⚠️ {err}</div>}
+          <button onClick={attempt} disabled={!user.trim() || !pass}
+            style={{ background: user.trim() && pass ? "#2563EB" : "#eee", color: user.trim() && pass ? "#fff" : "#aaa", border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 700, cursor: user.trim() && pass ? "pointer" : "default", marginTop: 4 }}>
+            Entrar
+          </button>
+        </div>
+        <div style={{ marginTop: 20, fontSize: 11, color: "#cbd5e1", textAlign: "center" }}>
+          Usuário padrão: <b>admin</b> · Senha: <b>distri123</b>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════ DASHBOARD ═══════════════════════════════════════
+function DashboardTab({ clientes, produtos, pedidos, financeiro }) {
+  const now = new Date();
+  const curMonth = monthKeyOf(todayISO());
+  const faturados = pedidos.filter(p => p.status === "faturado");
+  const faturamentoMes = faturados.filter(p => monthKeyOf(p.data) === curMonth).reduce((s, p) => s + pedidoTotal(p), 0);
+  const pedidosAbertos = pedidos.filter(p => p.status === "orcamento" || p.status === "pedido").length;
+  const in7 = new Date(now); in7.setDate(in7.getDate() + 7);
+  const in7key = in7.toISOString().split("T")[0];
+  const aVencer = financeiro.filter(f => f.status !== "pago" && f.vencimento >= todayISO() && f.vencimento <= in7key);
+  const vencidas = financeiro.filter(f => f.status !== "pago" && f.vencimento < todayISO());
+  const estoqueBaixo = produtos.filter(p => p.estoque <= p.estoqueMinimo);
+
+  const last6 = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1); return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: MONTH_SHORT[d.getMonth()] }; });
+  const vendasPorMes = last6.map(m => ({ ...m, total: faturados.filter(p => monthKeyOf(p.data) === m.key).reduce((s, p) => s + pedidoTotal(p), 0) }));
+  const maxVenda = Math.max(1, ...vendasPorMes.map(m => m.total));
+
+  const ultimosPedidos = [...pedidos].sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id).slice(0, 5);
+
+  return (
+    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 28px 40px" }}>
+      <PageHeader title="Dashboard" sub={`Visão geral · ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`} />
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 14, marginBottom: 24 }}>
+        <StatCard label="Faturamento do mês" value={fmtBRL(faturamentoMes)} color="#16a34a" bg="#f0fdf4" border="#bbf7d0" sub={`${faturados.filter(p => monthKeyOf(p.data) === curMonth).length} pedidos faturados`} />
+        <StatCard label="Pedidos em aberto" value={pedidosAbertos} color="#d97706" bg="#fffbeb" border="#fde68a" sub="orçamentos + confirmados" />
+        <StatCard label="Contas a vencer (7 dias)" value={aVencer.length} color="#2563EB" bg="#eff6ff" border="#bfdbfe" sub={vencidas.length ? `${vencidas.length} já vencida(s)` : "nenhuma vencida"} />
+        <StatCard label="Produtos com estoque baixo" value={estoqueBaixo.length} color="#dc2626" bg="#fff0f0" border="#fecaca" sub={`de ${produtos.length} produtos`} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 16, marginBottom: 20 }}>
+        <div style={{ ...cardBox, padding: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>Vendas faturadas — últimos 6 meses</div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 140 }}>
+            {vendasPorMes.map(m => (
+              <div key={m.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                <div style={{ fontSize: 10, color: "#94a3b8", fontFamily: "'JetBrains Mono',monospace" }}>{m.total > 0 ? fmtBRL(m.total).replace("R$ ", "") : ""}</div>
+                <div style={{ width: "100%", maxWidth: 34, height: Math.max(4, (m.total / maxVenda) * 100), background: m.key === curMonth ? "#2563EB" : "#bfdbfe", borderRadius: "6px 6px 0 0" }} />
+                <div style={{ fontSize: 11, color: "#94a3b8" }}>{m.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ ...cardBox, padding: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Estoque baixo</div>
+          {estoqueBaixo.length === 0 ? <div style={{ fontSize: 12, color: "#cbd5e1" }}>Tudo certo por aqui 👍</div> : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {estoqueBaixo.slice(0, 6).map(p => (
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}>
+                  <span>{p.nome}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "#dc2626", fontWeight: 700 }}>{p.estoque} {p.unidade}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ ...cardBox, padding: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Últimos pedidos</div>
+        {ultimosPedidos.length === 0 ? <EmptyState icon="🧾" text="Nenhum pedido lançado ainda" /> : (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <tbody>
+              {ultimosPedidos.map(p => (
+                <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <td style={{ padding: "8px 4px", fontSize: 12, fontFamily: "'JetBrains Mono',monospace", color: "#94a3b8" }}>{p.numero}</td>
+                  <td style={{ padding: "8px 4px", fontSize: 13 }}>{clientes.find(c => c.id === p.clienteId)?.nomeFantasia || "?"}</td>
+                  <td style={{ padding: "8px 4px", fontSize: 12, color: "#94a3b8" }}>{fmtDateBR(p.data)}</td>
+                  <td style={{ padding: "8px 4px", fontSize: 13, fontWeight: 700 }}>{fmtBRL(pedidoTotal(p))}</td>
+                  <td style={{ padding: "8px 4px" }}><StatusBadge value={p.status} list={PEDIDO_STATUS} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function pedidoTotal(p) { return Math.max(0, (p.itens || []).reduce((s, it) => s + it.qtd * it.precoUnit, 0) - (p.desconto || 0)); }
+function compraTotal(c) { return (c.itens || []).reduce((s, it) => s + it.qtd * it.precoUnit, 0); }
+
+// ═══════════════════════════ CLIENTES ════════════════════════════════════════
+function ClientesTab({ clientes, setClientes, showToast }) {
+  const [search, setSearch] = useState("");
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  const lista = clientes.filter(c =>
+    c.razaoSocial.toLowerCase().includes(search.toLowerCase()) ||
+    (c.nomeFantasia || "").toLowerCase().includes(search.toLowerCase()) ||
+    (c.cnpjCpf || "").includes(search)
+  );
+
+  function openNew() { setForm({ razaoSocial: "", nomeFantasia: "", cnpjCpf: "", telefone: "", email: "", endereco: "", cidade: "", uf: "SP", limiteCredito: "", obs: "" }); setModal({ mode: "new" }); }
+  function openEdit(c) { setForm({ ...c }); setModal({ mode: "edit" }); }
+  function saveCliente() {
+    if (!form.razaoSocial?.trim()) return;
+    const item = { ...form, limiteCredito: parseFloat(form.limiteCredito) || 0 };
+    if (modal.mode === "new") setClientes(l => [...l, { ...item, id: Date.now() }]);
+    else setClientes(l => l.map(x => x.id === item.id ? item : x));
+    setModal(null); showToast("Cliente salvo!");
+  }
+  function delCliente(id) { setClientes(l => l.filter(x => x.id !== id)); setConfirmDel(null); setModal(null); showToast("Cliente removido.", "err"); }
+
+  return (
+    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 28px 40px" }}>
+      <PageHeader title="Clientes" sub={`${clientes.length} cliente(s) cadastrado(s)`} action={<PrimaryButton onClick={openNew}>+ Novo Cliente</PrimaryButton>} />
+
+      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por razão social, nome fantasia ou CNPJ..."
+        style={{ ...inputStyle, maxWidth: 380, marginBottom: 18 }} />
+
+      {lista.length === 0 ? <EmptyState icon="👥" text="Nenhum cliente encontrado" /> : (
+        <div style={{ ...cardBox, overflow: "hidden", overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr style={{ background: "#f8fafc" }}>{["Razão Social", "CNPJ/CPF", "Cidade/UF", "Telefone", "Limite Crédito", ""].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+            <tbody>
+              {lista.map(c => (
+                <tr key={c.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <td style={tdStyle}><div style={{ fontWeight: 600 }}>{c.nomeFantasia || c.razaoSocial}</div><div style={{ fontSize: 11, color: "#94a3b8" }}>{c.razaoSocial}</div></td>
+                  <td style={tdStyle}>{c.cnpjCpf || "—"}</td>
+                  <td style={tdStyle}>{c.cidade ? `${c.cidade}/${c.uf}` : "—"}</td>
+                  <td style={tdStyle}>{c.telefone || "—"}</td>
+                  <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono',monospace" }}>{fmtBRL(c.limiteCredito)}</td>
+                  <td style={tdStyle}><button className="btn" onClick={() => openEdit(c)} style={{ background: "#f1f5f9", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, color: "#334155" }}>✏️ Editar</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {modal && (
+        <ModalOverlay onClose={() => setModal(null)}>
+          <ModalHeader title={modal.mode === "new" ? "Novo Cliente" : "Editar Cliente"} onClose={() => setModal(null)} />
+          {confirmDel ? (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div style={{ fontSize: 14, marginBottom: 20 }}>Excluir este cliente?</div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <button onClick={() => setConfirmDel(null)} style={{ padding: "9px 20px", borderRadius: 8, background: "#f1f5f9", border: "none", cursor: "pointer", fontWeight: 600 }}>Cancelar</button>
+                <button onClick={() => delCliente(form.id)} style={{ padding: "9px 20px", borderRadius: 8, background: "#dc2626", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600 }}>Excluir</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Field label="Razão Social *"><input value={form.razaoSocial || ""} onChange={e => setForm(f => ({ ...f, razaoSocial: e.target.value }))} style={inputStyle} /></Field>
+              <Field label="Nome Fantasia"><input value={form.nomeFantasia || ""} onChange={e => setForm(f => ({ ...f, nomeFantasia: e.target.value }))} style={inputStyle} /></Field>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 1 }}><Field label="CNPJ/CPF"><input value={form.cnpjCpf || ""} onChange={e => setForm(f => ({ ...f, cnpjCpf: e.target.value }))} style={inputStyle} /></Field></div>
+                <div style={{ flex: 1 }}><Field label="Telefone"><input value={form.telefone || ""} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} style={inputStyle} /></Field></div>
+              </div>
+              <Field label="E-mail"><input value={form.email || ""} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inputStyle} /></Field>
+              <Field label="Endereço"><input value={form.endereco || ""} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} style={inputStyle} /></Field>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 2 }}><Field label="Cidade"><input value={form.cidade || ""} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} style={inputStyle} /></Field></div>
+                <div style={{ flex: 1 }}><Field label="UF"><select value={form.uf || "SP"} onChange={e => setForm(f => ({ ...f, uf: e.target.value }))} style={inputStyle}>{UFS.map(u => <option key={u}>{u}</option>)}</select></Field></div>
+              </div>
+              <Field label="Limite de crédito (R$)"><input type="number" step="0.01" value={form.limiteCredito ?? ""} onChange={e => setForm(f => ({ ...f, limiteCredito: e.target.value }))} style={inputStyle} /></Field>
+              <Field label="Observações"><textarea value={form.obs || ""} onChange={e => setForm(f => ({ ...f, obs: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "none" }} /></Field>
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                {modal.mode === "edit" && <button onClick={() => setConfirmDel(true)} style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", border: "1.5px solid #fecaca", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>🗑 Excluir</button>}
+                <button onClick={saveCliente} disabled={!form.razaoSocial?.trim()}
+                  style={{ marginLeft: "auto", padding: "10px 24px", borderRadius: 9, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer", background: form.razaoSocial?.trim() ? "#2563EB" : "#eee", color: form.razaoSocial?.trim() ? "#fff" : "#aaa" }}>Salvar</button>
+              </div>
+            </div>
+          )}
+        </ModalOverlay>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════ PRODUTOS ════════════════════════════════════════
+function ProdutosTab({ produtos, setProdutos, showToast }) {
+  const [search, setSearch] = useState("");
+  const [catFiltro, setCatFiltro] = useState("todas");
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [ajuste, setAjuste] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  const lista = produtos.filter(p =>
+    (catFiltro === "todas" || p.categoria === catFiltro) &&
+    (p.nome.toLowerCase().includes(search.toLowerCase()) || p.codigo.includes(search))
+  );
+
+  function openNew() { setForm({ codigo: "", nome: "", categoria: CATEGORIAS[0], unidade: UNIDADES[0], precoCusto: "", precoVenda: "", estoque: 0, estoqueMinimo: 10, obs: "" }); setModal({ mode: "new" }); }
+  function openEdit(p) { setForm({ ...p }); setModal({ mode: "edit" }); }
+  function saveProduto() {
+    if (!form.nome?.trim() || !form.codigo?.trim()) return;
+    const item = { ...form, precoCusto: parseFloat(form.precoCusto) || 0, precoVenda: parseFloat(form.precoVenda) || 0, estoque: parseFloat(form.estoque) || 0, estoqueMinimo: parseFloat(form.estoqueMinimo) || 0 };
+    if (modal.mode === "new") setProdutos(l => [...l, { ...item, id: Date.now() }]);
+    else setProdutos(l => l.map(x => x.id === item.id ? item : x));
+    setModal(null); showToast("Produto salvo!");
+  }
+  function delProduto(id) { setProdutos(l => l.filter(x => x.id !== id)); setConfirmDel(null); setModal(null); showToast("Produto removido.", "err"); }
+
+  function openAjuste(p) { setAjuste({ produtoId: p.id, tipo: "entrada", qtd: "", motivo: "" }); }
+  function confirmAjuste() {
+    if (!ajuste.qtd || +ajuste.qtd <= 0) return;
+    const delta = ajuste.tipo === "entrada" ? +ajuste.qtd : -(+ajuste.qtd);
+    setProdutos(l => l.map(p => p.id === ajuste.produtoId ? { ...p, estoque: Math.max(0, p.estoque + delta) } : p));
+    setAjuste(null); showToast("Estoque ajustado!");
+  }
+
+  return (
+    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 28px 40px" }}>
+      <PageHeader title="Produtos" sub={`${produtos.length} produto(s) no catálogo`} action={<PrimaryButton onClick={openNew}>+ Novo Produto</PrimaryButton>} />
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome ou código..." style={{ ...inputStyle, maxWidth: 280 }} />
+        <select value={catFiltro} onChange={e => setCatFiltro(e.target.value)} style={{ ...inputStyle, maxWidth: 200 }}>
+          <option value="todas">Todas categorias</option>
+          {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+        </select>
+      </div>
+
+      {lista.length === 0 ? <EmptyState icon="📦" text="Nenhum produto encontrado" /> : (
+        <div style={{ ...cardBox, overflow: "hidden", overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr style={{ background: "#f8fafc" }}>{["Código", "Produto", "Categoria", "Un.", "Custo", "Venda", "Estoque", ""].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+            <tbody>
+              {lista.map(p => {
+                const baixo = p.estoque <= p.estoqueMinimo;
+                return (
+                  <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono',monospace", color: "#94a3b8" }}>{p.codigo}</td>
+                    <td style={{ ...tdStyle, fontWeight: 600 }}>{p.nome}</td>
+                    <td style={tdStyle}>{p.categoria}</td>
+                    <td style={tdStyle}>{p.unidade}</td>
+                    <td style={{ ...tdStyle, color: "#94a3b8" }}>{fmtBRL(p.precoCusto)}</td>
+                    <td style={{ ...tdStyle, fontWeight: 700 }}>{fmtBRL(p.precoVenda)}</td>
+                    <td style={tdStyle}>
+                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: baixo ? "#dc2626" : "#16a34a", background: baixo ? "#fff0f0" : "#f0fdf4", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>
+                        {p.estoque} {p.unidade}
+                      </span>
+                    </td>
+                    <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
+                      <button className="btn" onClick={() => openAjuste(p)} style={{ background: "#eff6ff", color: "#2563EB", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11, marginRight: 6 }}>📦 Ajustar</button>
+                      <button className="btn" onClick={() => openEdit(p)} style={{ background: "#f1f5f9", border: "none", borderRadius: 6, padding: "5px 9px", fontSize: 11, color: "#334155" }}>✏️</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {modal && (
+        <ModalOverlay onClose={() => setModal(null)}>
+          <ModalHeader title={modal.mode === "new" ? "Novo Produto" : "Editar Produto"} onClose={() => setModal(null)} />
+          {confirmDel ? (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div style={{ fontSize: 14, marginBottom: 20 }}>Excluir este produto?</div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <button onClick={() => setConfirmDel(null)} style={{ padding: "9px 20px", borderRadius: 8, background: "#f1f5f9", border: "none", cursor: "pointer", fontWeight: 600 }}>Cancelar</button>
+                <button onClick={() => delProduto(form.id)} style={{ padding: "9px 20px", borderRadius: 8, background: "#dc2626", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600 }}>Excluir</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 1 }}><Field label="Código *"><input value={form.codigo || ""} onChange={e => setForm(f => ({ ...f, codigo: e.target.value }))} style={inputStyle} /></Field></div>
+                <div style={{ flex: 2 }}><Field label="Unidade"><select value={form.unidade || UNIDADES[0]} onChange={e => setForm(f => ({ ...f, unidade: e.target.value }))} style={inputStyle}>{UNIDADES.map(u => <option key={u}>{u}</option>)}</select></Field></div>
+              </div>
+              <Field label="Nome do produto *"><input value={form.nome || ""} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} style={inputStyle} /></Field>
+              <Field label="Categoria"><select value={form.categoria || CATEGORIAS[0]} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))} style={inputStyle}>{CATEGORIAS.map(c => <option key={c}>{c}</option>)}</select></Field>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 1 }}><Field label="Preço custo (R$)"><input type="number" step="0.01" value={form.precoCusto ?? ""} onChange={e => setForm(f => ({ ...f, precoCusto: e.target.value }))} style={inputStyle} /></Field></div>
+                <div style={{ flex: 1 }}><Field label="Preço venda (R$)"><input type="number" step="0.01" value={form.precoVenda ?? ""} onChange={e => setForm(f => ({ ...f, precoVenda: e.target.value }))} style={inputStyle} /></Field></div>
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 1 }}><Field label="Estoque atual"><input type="number" value={form.estoque ?? 0} onChange={e => setForm(f => ({ ...f, estoque: e.target.value }))} style={inputStyle} /></Field></div>
+                <div style={{ flex: 1 }}><Field label="Estoque mínimo"><input type="number" value={form.estoqueMinimo ?? 0} onChange={e => setForm(f => ({ ...f, estoqueMinimo: e.target.value }))} style={inputStyle} /></Field></div>
+              </div>
+              <Field label="Observações"><textarea value={form.obs || ""} onChange={e => setForm(f => ({ ...f, obs: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "none" }} /></Field>
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                {modal.mode === "edit" && <button onClick={() => setConfirmDel(true)} style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", border: "1.5px solid #fecaca", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>🗑 Excluir</button>}
+                <button onClick={saveProduto} disabled={!form.nome?.trim() || !form.codigo?.trim()}
+                  style={{ marginLeft: "auto", padding: "10px 24px", borderRadius: 9, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer", background: form.nome?.trim() && form.codigo?.trim() ? "#2563EB" : "#eee", color: form.nome?.trim() && form.codigo?.trim() ? "#fff" : "#aaa" }}>Salvar</button>
+              </div>
+            </div>
+          )}
+        </ModalOverlay>
+      )}
+
+      {ajuste && (
+        <ModalOverlay onClose={() => setAjuste(null)} small>
+          <ModalHeader title="Ajustar Estoque" sub={produtos.find(p => p.id === ajuste.produtoId)?.nome} onClose={() => setAjuste(null)} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[["entrada", "↓ Entrada"], ["saida", "↑ Saída"]].map(([v, l]) => (
+                <button key={v} onClick={() => setAjuste(a => ({ ...a, tipo: v }))}
+                  style={{ flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, background: ajuste.tipo === v ? (v === "entrada" ? "#16a34a" : "#dc2626") : "#f1f5f9", color: ajuste.tipo === v ? "#fff" : "#555" }}>{l}</button>
+              ))}
+            </div>
+            <Field label="Quantidade"><input type="number" min="1" value={ajuste.qtd} onChange={e => setAjuste(a => ({ ...a, qtd: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Motivo"><input value={ajuste.motivo} onChange={e => setAjuste(a => ({ ...a, motivo: e.target.value }))} placeholder="Ex: inventário, avaria..." style={inputStyle} /></Field>
+            <button onClick={confirmAjuste} disabled={!ajuste.qtd || +ajuste.qtd <= 0}
+              style={{ padding: "10px 24px", borderRadius: 9, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer", background: ajuste.qtd && +ajuste.qtd > 0 ? "#2563EB" : "#eee", color: ajuste.qtd && +ajuste.qtd > 0 ? "#fff" : "#aaa" }}>Confirmar</button>
+          </div>
+        </ModalOverlay>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════ PEDIDOS (VENDAS) ════════════════════════════════
+function PedidosTab({ pedidos, setPedidos, clientes, produtos, setProdutos, setFinanceiro, showToast }) {
+  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [filtroCliente, setFiltroCliente] = useState("");
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [itens, setItens] = useState([]);
+
+  const lista = pedidos.filter(p =>
+    (filtroStatus === "todos" || p.status === filtroStatus) &&
+    (!filtroCliente || p.clienteId === +filtroCliente)
+  ).sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
+
+  function openNew() {
+    setForm({ clienteId: clientes[0]?.id || "", data: todayISO(), desconto: "", obs: "" });
+    setItens([]);
+    setModal({ mode: "new" });
+  }
+  function openView(p) { setForm({ ...p }); setItens(p.itens || []); setModal({ mode: "view", pedido: p }); }
+
+  function savePedido() {
+    if (!form.clienteId || itens.length === 0) return;
+    const item = { id: Date.now(), numero: nextNumero(pedidos, "PED"), clienteId: +form.clienteId, data: form.data || todayISO(), itens, desconto: parseFloat(form.desconto) || 0, status: "orcamento", faturadoProcessado: false, obs: form.obs || "" };
+    setPedidos(l => [...l, item]);
+    setModal(null); showToast("Pedido criado como orçamento!");
+  }
+
+  function avancarStatus(p, novoStatus) {
+    if (novoStatus === "faturado" && !p.faturadoProcessado) {
+      const faltando = p.itens.filter(it => {
+        const prod = produtos.find(x => x.id === it.produtoId);
+        return !prod || prod.estoque < it.qtd;
+      });
+      if (faltando.length > 0) {
+        showToast(`Estoque insuficiente para faturar: ${faltando.map(it => produtos.find(x => x.id === it.produtoId)?.nome || "?").join(", ")}`, "err");
+        return;
+      }
+      setProdutos(list => list.map(prod => {
+        const it = p.itens.find(x => x.produtoId === prod.id);
+        return it ? { ...prod, estoque: prod.estoque - it.qtd } : prod;
+      }));
+      const cliente = clientes.find(c => c.id === p.clienteId);
+      setFinanceiro(f => [...f, {
+        id: Date.now(), tipo: "receber", descricao: `Pedido ${p.numero} — ${cliente?.nomeFantasia || cliente?.razaoSocial || "Cliente"}`,
+        categoria: FIN_CATS_REC[0], valor: pedidoTotal(p), vencimento: p.data, status: "pendente", obs: "", origem: p.numero,
+      }]);
+      setPedidos(l => l.map(x => x.id === p.id ? { ...x, status: "faturado", faturadoProcessado: true } : x));
+      showToast(`Pedido ${p.numero} faturado! Estoque baixado e lançamento financeiro criado.`);
+      setModal(null);
+      return;
+    }
+    setPedidos(l => l.map(x => x.id === p.id ? { ...x, status: novoStatus } : x));
+    setModal(null);
+    showToast(`Pedido ${p.numero} atualizado.`);
+  }
+
+  return (
+    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 28px 40px" }}>
+      <PageHeader title="Pedidos" sub={`${pedidos.length} pedido(s) lançado(s)`} action={<PrimaryButton onClick={openNew} disabled={clientes.length === 0 || produtos.length === 0}>+ Novo Pedido</PrimaryButton>} />
+      {(clientes.length === 0 || produtos.length === 0) && <div style={{ fontSize: 12, color: "#d97706", marginBottom: 14 }}>Cadastre ao menos um cliente e um produto para criar pedidos.</div>}
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
+        {[["todos", "Todos"], ...PEDIDO_STATUS.map(s => [s.value, s.label])].map(([v, l]) => (
+          <button key={v} onClick={() => setFiltroStatus(v)}
+            style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: "1.5px solid #e2e8f0", cursor: "pointer", background: filtroStatus === v ? "#1e293b" : "#fff", color: filtroStatus === v ? "#fff" : "#555" }}>{l}</button>
+        ))}
+        <select value={filtroCliente} onChange={e => setFiltroCliente(e.target.value)} style={{ ...inputStyle, maxWidth: 220 }}>
+          <option value="">Todos os clientes</option>
+          {clientes.map(c => <option key={c.id} value={c.id}>{c.nomeFantasia || c.razaoSocial}</option>)}
+        </select>
+      </div>
+
+      {lista.length === 0 ? <EmptyState icon="🧾" text="Nenhum pedido encontrado" /> : (
+        <div style={{ ...cardBox, overflow: "hidden", overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr style={{ background: "#f8fafc" }}>{["Nº", "Cliente", "Data", "Total", "Status", ""].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+            <tbody>
+              {lista.map(p => (
+                <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono',monospace", color: "#94a3b8" }}>{p.numero}</td>
+                  <td style={{ ...tdStyle, fontWeight: 600 }}>{clientes.find(c => c.id === p.clienteId)?.nomeFantasia || "?"}</td>
+                  <td style={tdStyle}>{fmtDateBR(p.data)}</td>
+                  <td style={{ ...tdStyle, fontWeight: 700 }}>{fmtBRL(pedidoTotal(p))}</td>
+                  <td style={tdStyle}><StatusBadge value={p.status} list={PEDIDO_STATUS} /></td>
+                  <td style={tdStyle}><button className="btn" onClick={() => openView(p)} style={{ background: "#f1f5f9", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, color: "#334155" }}>Ver / Ações</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {modal?.mode === "new" && (
+        <ModalOverlay onClose={() => setModal(null)} wide>
+          <ModalHeader title="Novo Pedido" sub="Criado inicialmente como orçamento" onClose={() => setModal(null)} />
+          <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+            <div style={{ flex: 2 }}><Field label="Cliente *"><select value={form.clienteId} onChange={e => setForm(f => ({ ...f, clienteId: e.target.value }))} style={inputStyle}>{clientes.map(c => <option key={c.id} value={c.id}>{c.nomeFantasia || c.razaoSocial}</option>)}</select></Field></div>
+            <div style={{ flex: 1 }}><Field label="Data"><input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} style={inputStyle} /></Field></div>
+          </div>
+          <Label>Itens do pedido</Label>
+          <ItemsBuilder produtos={produtos} itens={itens} setItens={setItens} priceField="precoVenda" />
+          <div style={{ marginTop: 12 }}><Field label="Desconto (R$)"><input type="number" step="0.01" value={form.desconto} onChange={e => setForm(f => ({ ...f, desconto: e.target.value }))} style={inputStyle} /></Field></div>
+          <div style={{ marginTop: 12 }}><Field label="Observações"><textarea value={form.obs} onChange={e => setForm(f => ({ ...f, obs: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "none" }} /></Field></div>
+          <div style={{ display: "flex", marginTop: 20 }}>
+            <button onClick={savePedido} disabled={!form.clienteId || itens.length === 0}
+              style={{ marginLeft: "auto", padding: "10px 24px", borderRadius: 9, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer", background: form.clienteId && itens.length > 0 ? "#2563EB" : "#eee", color: form.clienteId && itens.length > 0 ? "#fff" : "#aaa" }}>Salvar Orçamento</button>
+          </div>
+        </ModalOverlay>
+      )}
+
+      {modal?.mode === "view" && (
+        <ModalOverlay onClose={() => setModal(null)} wide>
+          <ModalHeader title={`Pedido ${modal.pedido.numero}`} sub={`${clientes.find(c => c.id === modal.pedido.clienteId)?.razaoSocial || "?"} · ${fmtDateBR(modal.pedido.data)}`} onClose={() => setModal(null)} />
+          <div style={{ marginBottom: 12 }}><StatusBadge value={modal.pedido.status} list={PEDIDO_STATUS} /></div>
+          <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                {modal.pedido.itens.map((it, idx) => {
+                  const prod = produtos.find(x => x.id === it.produtoId);
+                  return (
+                    <tr key={idx} style={{ borderBottom: idx < modal.pedido.itens.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                      <td style={{ padding: "8px 12px", fontSize: 12.5 }}>{prod?.nome || "?"}</td>
+                      <td style={{ padding: "8px 12px", fontSize: 12, color: "#94a3b8" }}>{it.qtd} {prod?.unidade}</td>
+                      <td style={{ padding: "8px 12px", fontSize: 12, color: "#94a3b8" }}>{fmtBRL(it.precoUnit)}</td>
+                      <td style={{ padding: "8px 12px", fontSize: 12.5, fontWeight: 700 }}>{fmtBRL(it.qtd * it.precoUnit)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {modal.pedido.desconto > 0 && <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "right" }}>Desconto: -{fmtBRL(modal.pedido.desconto)}</div>}
+          <div style={{ textAlign: "right", fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Total: {fmtBRL(pedidoTotal(modal.pedido))}</div>
+          {modal.pedido.obs && <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12 }}>Obs: {modal.pedido.obs}</div>}
+
+          <div style={{ display: "flex", gap: 8, marginTop: 20, flexWrap: "wrap" }}>
+            {modal.pedido.status === "orcamento" && (
+              <>
+                <button onClick={() => avancarStatus(modal.pedido, "cancelado")} style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", border: "1.5px solid #fecaca", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Cancelar</button>
+                <button onClick={() => avancarStatus(modal.pedido, "pedido")} style={{ marginLeft: "auto", padding: "10px 20px", borderRadius: 9, background: "#d97706", color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Confirmar Pedido</button>
+              </>
+            )}
+            {modal.pedido.status === "pedido" && (
+              <>
+                <button onClick={() => avancarStatus(modal.pedido, "cancelado")} style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", border: "1.5px solid #fecaca", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Cancelar</button>
+                <button onClick={() => avancarStatus(modal.pedido, "faturado")} style={{ marginLeft: "auto", padding: "10px 20px", borderRadius: 9, background: "#16a34a", color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>💵 Faturar Pedido</button>
+              </>
+            )}
+          </div>
+        </ModalOverlay>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════ COMPRAS / FORNECEDORES ══════════════════════════
+function ComprasTab({ fornecedores, setFornecedores, compras, setCompras, produtos, setProdutos, setFinanceiro, showToast }) {
+  const [sub, setSub] = useState("compras");
+
+  return (
+    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 28px 40px" }}>
+      <PageHeader title="Compras" sub="Fornecedores e pedidos de compra" />
+      <div style={{ display: "flex", gap: 4, marginBottom: 22 }}>
+        {[["compras", "Pedidos de Compra"], ["fornecedores", "Fornecedores"]].map(([v, l]) => (
+          <button key={v} onClick={() => setSub(v)}
+            style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer", background: sub === v ? "#1e293b" : "#f1f5f9", color: sub === v ? "#fff" : "#555" }}>{l}</button>
+        ))}
+      </div>
+      {sub === "compras"
+        ? <ComprasList compras={compras} setCompras={setCompras} fornecedores={fornecedores} produtos={produtos} setProdutos={setProdutos} setFinanceiro={setFinanceiro} showToast={showToast} />
+        : <FornecedoresList fornecedores={fornecedores} setFornecedores={setFornecedores} showToast={showToast} />}
+    </div>
+  );
+}
+
+function FornecedoresList({ fornecedores, setFornecedores, showToast }) {
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  function openNew() { setForm({ razaoSocial: "", cnpj: "", telefone: "", email: "", contato: "", obs: "" }); setModal({ mode: "new" }); }
+  function openEdit(f) { setForm({ ...f }); setModal({ mode: "edit" }); }
+  function saveFornecedor() {
+    if (!form.razaoSocial?.trim()) return;
+    if (modal.mode === "new") setFornecedores(l => [...l, { ...form, id: Date.now() }]);
+    else setFornecedores(l => l.map(x => x.id === form.id ? form : x));
+    setModal(null); showToast("Fornecedor salvo!");
+  }
+  function delFornecedor(id) { setFornecedores(l => l.filter(x => x.id !== id)); setConfirmDel(null); setModal(null); showToast("Fornecedor removido.", "err"); }
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}><PrimaryButton onClick={openNew}>+ Novo Fornecedor</PrimaryButton></div>
+      {fornecedores.length === 0 ? <EmptyState icon="🚚" text="Nenhum fornecedor cadastrado" /> : (
+        <div style={{ ...cardBox, overflow: "hidden", overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr style={{ background: "#f8fafc" }}>{["Razão Social", "CNPJ", "Contato", "Telefone", ""].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+            <tbody>
+              {fornecedores.map(f => (
+                <tr key={f.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <td style={{ ...tdStyle, fontWeight: 600 }}>{f.razaoSocial}</td>
+                  <td style={tdStyle}>{f.cnpj || "—"}</td>
+                  <td style={tdStyle}>{f.contato || "—"}</td>
+                  <td style={tdStyle}>{f.telefone || "—"}</td>
+                  <td style={tdStyle}><button className="btn" onClick={() => openEdit(f)} style={{ background: "#f1f5f9", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, color: "#334155" }}>✏️ Editar</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {modal && (
+        <ModalOverlay onClose={() => setModal(null)}>
+          <ModalHeader title={modal.mode === "new" ? "Novo Fornecedor" : "Editar Fornecedor"} onClose={() => setModal(null)} />
+          {confirmDel ? (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div style={{ fontSize: 14, marginBottom: 20 }}>Excluir este fornecedor?</div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <button onClick={() => setConfirmDel(null)} style={{ padding: "9px 20px", borderRadius: 8, background: "#f1f5f9", border: "none", cursor: "pointer", fontWeight: 600 }}>Cancelar</button>
+                <button onClick={() => delFornecedor(form.id)} style={{ padding: "9px 20px", borderRadius: 8, background: "#dc2626", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600 }}>Excluir</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Field label="Razão Social *"><input value={form.razaoSocial || ""} onChange={e => setForm(f => ({ ...f, razaoSocial: e.target.value }))} style={inputStyle} /></Field>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 1 }}><Field label="CNPJ"><input value={form.cnpj || ""} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} style={inputStyle} /></Field></div>
+                <div style={{ flex: 1 }}><Field label="Telefone"><input value={form.telefone || ""} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} style={inputStyle} /></Field></div>
+              </div>
+              <Field label="Contato"><input value={form.contato || ""} onChange={e => setForm(f => ({ ...f, contato: e.target.value }))} style={inputStyle} /></Field>
+              <Field label="E-mail"><input value={form.email || ""} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inputStyle} /></Field>
+              <Field label="Observações"><textarea value={form.obs || ""} onChange={e => setForm(f => ({ ...f, obs: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "none" }} /></Field>
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                {modal.mode === "edit" && <button onClick={() => setConfirmDel(true)} style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", border: "1.5px solid #fecaca", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>🗑 Excluir</button>}
+                <button onClick={saveFornecedor} disabled={!form.razaoSocial?.trim()}
+                  style={{ marginLeft: "auto", padding: "10px 24px", borderRadius: 9, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer", background: form.razaoSocial?.trim() ? "#2563EB" : "#eee", color: form.razaoSocial?.trim() ? "#fff" : "#aaa" }}>Salvar</button>
+              </div>
+            </div>
+          )}
+        </ModalOverlay>
+      )}
+    </div>
+  );
+}
+
+function ComprasList({ compras, setCompras, fornecedores, produtos, setProdutos, setFinanceiro, showToast }) {
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [itens, setItens] = useState([]);
+
+  function openNew() { setForm({ fornecedorId: fornecedores[0]?.id || "", data: todayISO(), obs: "" }); setItens([]); setModal({ mode: "new" }); }
+  function openView(c) { setModal({ mode: "view", compra: c }); }
+
+  function saveCompra() {
+    if (!form.fornecedorId || itens.length === 0) return;
+    const item = { id: Date.now(), numero: nextNumero(compras, "COMP"), fornecedorId: +form.fornecedorId, data: form.data || todayISO(), itens, status: "pendente", recebidoProcessado: false, obs: form.obs || "" };
+    setCompras(l => [...l, item]);
+    setModal(null); showToast("Pedido de compra criado!");
+  }
+
+  function receberCompra(c) {
+    if (c.recebidoProcessado) return;
+    setProdutos(list => list.map(prod => {
+      const it = c.itens.find(x => x.produtoId === prod.id);
+      return it ? { ...prod, estoque: prod.estoque + it.qtd } : prod;
+    }));
+    const forn = fornecedores.find(f => f.id === c.fornecedorId);
+    setFinanceiro(f => [...f, {
+      id: Date.now(), tipo: "pagar", descricao: `Compra ${c.numero} — ${forn?.razaoSocial || "Fornecedor"}`,
+      categoria: FIN_CATS_PAG[0], valor: compraTotal(c), vencimento: c.data, status: "pendente", obs: "", origem: c.numero,
+    }]);
+    setCompras(l => l.map(x => x.id === c.id ? { ...x, status: "recebido", recebidoProcessado: true } : x));
+    showToast(`Compra ${c.numero} recebida! Estoque atualizado e conta a pagar criada.`);
+    setModal(null);
+  }
+
+  function cancelarCompra(c) { setCompras(l => l.map(x => x.id === c.id ? { ...x, status: "cancelado" } : x)); setModal(null); showToast("Compra cancelada.", "err"); }
+
+  const lista = [...compras].sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+        <PrimaryButton onClick={openNew} disabled={fornecedores.length === 0 || produtos.length === 0}>+ Novo Pedido de Compra</PrimaryButton>
+      </div>
+      {(fornecedores.length === 0 || produtos.length === 0) && <div style={{ fontSize: 12, color: "#d97706", marginBottom: 14 }}>Cadastre ao menos um fornecedor e um produto para lançar compras.</div>}
+
+      {lista.length === 0 ? <EmptyState icon="🚚" text="Nenhuma compra lançada" /> : (
+        <div style={{ ...cardBox, overflow: "hidden", overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr style={{ background: "#f8fafc" }}>{["Nº", "Fornecedor", "Data", "Total", "Status", ""].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
+            <tbody>
+              {lista.map(c => (
+                <tr key={c.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono',monospace", color: "#94a3b8" }}>{c.numero}</td>
+                  <td style={{ ...tdStyle, fontWeight: 600 }}>{fornecedores.find(f => f.id === c.fornecedorId)?.razaoSocial || "?"}</td>
+                  <td style={tdStyle}>{fmtDateBR(c.data)}</td>
+                  <td style={{ ...tdStyle, fontWeight: 700 }}>{fmtBRL(compraTotal(c))}</td>
+                  <td style={tdStyle}><StatusBadge value={c.status} list={COMPRA_STATUS} /></td>
+                  <td style={tdStyle}><button className="btn" onClick={() => openView(c)} style={{ background: "#f1f5f9", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, color: "#334155" }}>Ver / Ações</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {modal?.mode === "new" && (
+        <ModalOverlay onClose={() => setModal(null)} wide>
+          <ModalHeader title="Novo Pedido de Compra" onClose={() => setModal(null)} />
+          <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+            <div style={{ flex: 2 }}><Field label="Fornecedor *"><select value={form.fornecedorId} onChange={e => setForm(f => ({ ...f, fornecedorId: e.target.value }))} style={inputStyle}>{fornecedores.map(f => <option key={f.id} value={f.id}>{f.razaoSocial}</option>)}</select></Field></div>
+            <div style={{ flex: 1 }}><Field label="Data"><input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} style={inputStyle} /></Field></div>
+          </div>
+          <Label>Itens da compra</Label>
+          <ItemsBuilder produtos={produtos} itens={itens} setItens={setItens} priceField="precoCusto" />
+          <div style={{ marginTop: 12 }}><Field label="Observações"><textarea value={form.obs} onChange={e => setForm(f => ({ ...f, obs: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "none" }} /></Field></div>
+          <div style={{ display: "flex", marginTop: 20 }}>
+            <button onClick={saveCompra} disabled={!form.fornecedorId || itens.length === 0}
+              style={{ marginLeft: "auto", padding: "10px 24px", borderRadius: 9, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer", background: form.fornecedorId && itens.length > 0 ? "#2563EB" : "#eee", color: form.fornecedorId && itens.length > 0 ? "#fff" : "#aaa" }}>Salvar Pedido de Compra</button>
+          </div>
+        </ModalOverlay>
+      )}
+
+      {modal?.mode === "view" && (
+        <ModalOverlay onClose={() => setModal(null)} wide>
+          <ModalHeader title={`Compra ${modal.compra.numero}`} sub={`${fornecedores.find(f => f.id === modal.compra.fornecedorId)?.razaoSocial || "?"} · ${fmtDateBR(modal.compra.data)}`} onClose={() => setModal(null)} />
+          <div style={{ marginBottom: 12 }}><StatusBadge value={modal.compra.status} list={COMPRA_STATUS} /></div>
+          <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                {modal.compra.itens.map((it, idx) => {
+                  const prod = produtos.find(x => x.id === it.produtoId);
+                  return (
+                    <tr key={idx} style={{ borderBottom: idx < modal.compra.itens.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                      <td style={{ padding: "8px 12px", fontSize: 12.5 }}>{prod?.nome || "?"}</td>
+                      <td style={{ padding: "8px 12px", fontSize: 12, color: "#94a3b8" }}>{it.qtd} {prod?.unidade}</td>
+                      <td style={{ padding: "8px 12px", fontSize: 12, color: "#94a3b8" }}>{fmtBRL(it.precoUnit)}</td>
+                      <td style={{ padding: "8px 12px", fontSize: 12.5, fontWeight: 700 }}>{fmtBRL(it.qtd * it.precoUnit)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ textAlign: "right", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Total: {fmtBRL(compraTotal(modal.compra))}</div>
+          {modal.compra.status === "pendente" && (
+            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+              <button onClick={() => cancelarCompra(modal.compra)} style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", border: "1.5px solid #fecaca", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Cancelar</button>
+              <button onClick={() => receberCompra(modal.compra)} style={{ marginLeft: "auto", padding: "10px 20px", borderRadius: 9, background: "#16a34a", color: "#fff", border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>📥 Marcar como Recebido</button>
+            </div>
+          )}
+        </ModalOverlay>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════ FINANCEIRO ══════════════════════════════════════
+function FinanceiroTab({ financeiro, setFinanceiro, showToast }) {
+  const today = todayISO();
   const [filtroTipo, setFiltroTipo] = useState("todos");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroMes, setFiltroMes] = useState(() => today.slice(0, 7));
-  const [modal, setModal] = useState(null); // null | { mode:"new"|"edit", item }
+  const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [confirmDel, setConfirmDel] = useState(null);
 
@@ -111,139 +999,66 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
   const totalPagPago = financeiro.filter(i => i.tipo === "pagar" && i.status === "pago" && i.vencimento.startsWith(filtroMes)).reduce((s, i) => s + i.valor, 0);
   const saldo = totalRecPago - totalPagPago;
 
-  function openNew(tipo) {
-    setForm({ tipo, descricao: "", valor: "", vencimento: today, categoria: tipo === "receber" ? FIN_CATS_REC[0] : FIN_CATS_PAG[0], status: "pendente", obs: "" });
-    setModal({ mode: "new" });
-  }
-
-  function openEdit(item) {
-    setForm({ ...item });
-    setModal({ mode: "edit" });
-  }
-
-  function save() {
+  function openNew(tipo) { setForm({ tipo, descricao: "", valor: "", vencimento: today, categoria: tipo === "receber" ? FIN_CATS_REC[0] : FIN_CATS_PAG[0], status: "pendente", obs: "" }); setModal({ mode: "new" }); }
+  function openEdit(item) { setForm({ ...item }); setModal({ mode: "edit" }); }
+  function saveItem() {
     if (!form.descricao?.trim() || !form.valor || !form.vencimento) return;
     const item = { ...form, valor: parseFloat(form.valor) };
-    if (modal.mode === "new") {
-      setFinanceiro(f => [...f, { ...item, id: Date.now() }]);
-    } else {
-      setFinanceiro(f => f.map(x => x.id === item.id ? item : x));
-    }
-    setModal(null);
+    if (modal.mode === "new") setFinanceiro(f => [...f, { ...item, id: Date.now() }]);
+    else setFinanceiro(f => f.map(x => x.id === item.id ? item : x));
+    setModal(null); showToast("Lançamento salvo!");
   }
-
-  function toggleStatus(id) {
-    setFinanceiro(f => f.map(x => x.id === id ? { ...x, status: x.status === "pago" ? "pendente" : "pago" } : x));
-  }
-
-  function del(id) {
-    setFinanceiro(f => f.filter(x => x.id !== id));
-    setConfirmDel(null); setModal(null);
-  }
-
+  function toggleStatus(id) { setFinanceiro(f => f.map(x => x.id === id ? { ...x, status: x.status === "pago" ? "pendente" : "pago" } : x)); }
+  function del(id) { setFinanceiro(f => f.filter(x => x.id !== id)); setConfirmDel(null); setModal(null); showToast("Lançamento removido.", "err"); }
   function statusColor(item) {
     if (item.status === "pago") return { bg: "#f0fdf4", color: "#16a34a", label: "Pago" };
     if (item.vencimento < today) return { bg: "#fff0f0", color: "#dc2626", label: "Vencido" };
     return { bg: "#fffbeb", color: "#d97706", label: "Pendente" };
   }
 
-  const [ym, setYm] = useState(filtroMes);
-  const mesLabel = (() => { const [y, m] = filtroMes.split("-"); return `${MONTH_NAMES[parseInt(m) - 1]} ${y}`; })();
-
   return (
-    <div style={{ maxWidth: 960, margin: "32px auto", padding: "0 24px" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <h2 style={{ fontSize: 22, fontWeight: 700 }}>Financeiro</h2>
-          <div style={{ fontSize: 13, color: "#aaa" }}>Contas a pagar e a receber</div>
-        </div>
+    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 28px 40px" }}>
+      <PageHeader title="Financeiro" sub="Contas a pagar e a receber" action={
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => openNew("receber")}
-            style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-            + A Receber
-          </button>
-          <button onClick={() => openNew("pagar")}
-            style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-            + A Pagar
-          </button>
+          <PrimaryButton onClick={() => openNew("receber")} color="#16a34a">+ A Receber</PrimaryButton>
+          <PrimaryButton onClick={() => openNew("pagar")} color="#dc2626">+ A Pagar</PrimaryButton>
         </div>
-      </div>
+      } />
 
-      {/* Resumo cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: 14, marginBottom: 24 }}>
-        {[
-          { label: "A Receber", val: totalRec, recebido: totalRecPago, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
-          { label: "A Pagar", val: totalPag, recebido: totalPagPago, color: "#dc2626", bg: "#fff0f0", border: "#fecaca" },
-          { label: "Saldo (recebido − pago)", val: saldo, color: saldo >= 0 ? "#2563eb" : "#dc2626", bg: "#eff6ff", border: "#bfdbfe" },
-        ].map(c => (
-          <div key={c.label} style={{ background: c.bg, border: `1.5px solid ${c.border}`, borderRadius: 14, padding: "18px 20px" }}>
-            <div style={{ fontSize: 11, color: "#888", fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, marginBottom: 6 }}>{c.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: c.color }}>R$ {c.val.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-            {c.recebido !== undefined && <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>Recebido/pago: R$ {c.recebido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>}
-          </div>
-        ))}
+        <StatCard label="A Receber" value={fmtBRL(totalRec)} color="#16a34a" bg="#f0fdf4" border="#bbf7d0" sub={`Recebido: ${fmtBRL(totalRecPago)}`} />
+        <StatCard label="A Pagar" value={fmtBRL(totalPag)} color="#dc2626" bg="#fff0f0" border="#fecaca" sub={`Pago: ${fmtBRL(totalPagPago)}`} />
+        <StatCard label="Saldo (recebido − pago)" value={fmtBRL(saldo)} color={saldo >= 0 ? "#2563eb" : "#dc2626"} bg="#eff6ff" border="#bfdbfe" />
       </div>
 
-      {/* Filtros */}
       <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-        <input type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}
-          style={{ border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#fff" }} />
+        <input type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
         {[["todos", "Todos"], ["receber", "A Receber"], ["pagar", "A Pagar"]].map(([v, l]) => (
-          <button key={v} onClick={() => setFiltroTipo(v)}
-            style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: "1.5px solid #e5e0d6", cursor: "pointer", background: filtroTipo === v ? "#1a1a1a" : "#fff", color: filtroTipo === v ? "#fff" : "#555" }}>{l}</button>
+          <button key={v} onClick={() => setFiltroTipo(v)} style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: "1.5px solid #e2e8f0", cursor: "pointer", background: filtroTipo === v ? "#1e293b" : "#fff", color: filtroTipo === v ? "#fff" : "#555" }}>{l}</button>
         ))}
         {["todos", "pendente", "pago"].map(v => (
-          <button key={v} onClick={() => setFiltroStatus(v)}
-            style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: "1.5px solid #e5e0d6", cursor: "pointer", background: filtroStatus === v ? "#555" : "#fff", color: filtroStatus === v ? "#fff" : "#555" }}>
+          <button key={v} onClick={() => setFiltroStatus(v)} style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: "1.5px solid #e2e8f0", cursor: "pointer", background: filtroStatus === v ? "#555" : "#fff", color: filtroStatus === v ? "#fff" : "#555" }}>
             {v === "todos" ? "Todos status" : v === "pago" ? "✅ Pago" : "⏳ Pendente"}
           </button>
         ))}
       </div>
 
-      {/* Lista */}
-      {lista.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "#ccc" }}>
-          <div style={{ fontSize: 40 }}>💰</div>
-          <div style={{ fontSize: 14, marginTop: 8 }}>Nenhum lançamento encontrado</div>
-        </div>
-      ) : (
-        <div style={{ background: "#fff", borderRadius: 14, border: "1.5px solid #e5e0d6", overflow: "hidden" }}>
+      {lista.length === 0 ? <EmptyState icon="💰" text="Nenhum lançamento encontrado" /> : (
+        <div style={{ ...cardBox, overflow: "hidden", overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#faf9f6" }}>
-                {["Tipo", "Descrição", "Categoria", "Vencimento", "Valor", "Status", ""].map(h => (
-                  <th key={h} style={{ padding: "11px 14px", textAlign: "left", fontSize: 11, color: "#aaa", fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, borderBottom: "1.5px solid #e5e0d6", fontFamily: "'JetBrains Mono',monospace" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
+            <thead><tr style={{ background: "#f8fafc" }}>{["Tipo", "Descrição", "Categoria", "Vencimento", "Valor", "Status", ""].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
             <tbody>
               {lista.map(item => {
                 const s = statusColor(item);
                 return (
-                  <tr key={item.id} style={{ borderBottom: "1px solid #f0ede6" }}>
-                    <td style={{ padding: "10px 14px" }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, background: item.tipo === "receber" ? "#f0fdf4" : "#fff0f0", color: item.tipo === "receber" ? "#16a34a" : "#dc2626" }}>
-                        {item.tipo === "receber" ? "↓ Receber" : "↑ Pagar"}
-                      </span>
-                    </td>
-                    <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 500 }}>{item.descricao}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, color: "#888" }}>{item.categoria}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, fontFamily: "'JetBrains Mono',monospace", color: item.vencimento < today && item.status !== "pago" ? "#dc2626" : "#555" }}>
-                      {item.vencimento.split("-").reverse().join("/")}
-                    </td>
-                    <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 700, color: item.tipo === "receber" ? "#16a34a" : "#dc2626" }}>
-                      R$ {parseFloat(item.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ padding: "10px 14px" }}>
-                      <button onClick={() => toggleStatus(item.id)}
-                        style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: s.bg, color: s.color }}>
-                        {s.label}
-                      </button>
-                    </td>
-                    <td style={{ padding: "10px 14px" }}>
-                      <button onClick={() => openEdit(item)} style={{ background: "#f5f3ee", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", color: "#555" }}>✏️ Editar</button>
-                    </td>
+                  <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={tdStyle}><span style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, background: item.tipo === "receber" ? "#f0fdf4" : "#fff0f0", color: item.tipo === "receber" ? "#16a34a" : "#dc2626" }}>{item.tipo === "receber" ? "↓ Receber" : "↑ Pagar"}</span></td>
+                    <td style={{ ...tdStyle, fontWeight: 500 }}>{item.descricao}{item.origem && <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 6 }}>({item.origem})</span>}</td>
+                    <td style={{ ...tdStyle, color: "#94a3b8" }}>{item.categoria}</td>
+                    <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono',monospace", color: item.vencimento < today && item.status !== "pago" ? "#dc2626" : "#555" }}>{fmtDateBR(item.vencimento)}</td>
+                    <td style={{ ...tdStyle, fontWeight: 700, color: item.tipo === "receber" ? "#16a34a" : "#dc2626" }}>{fmtBRL(item.valor)}</td>
+                    <td style={tdStyle}><button onClick={() => toggleStatus(item.id)} style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", background: s.bg, color: s.color }}>{s.label}</button></td>
+                    <td style={tdStyle}><button onClick={() => openEdit(item)} style={{ background: "#f1f5f9", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", color: "#334155" }}>✏️</button></td>
                   </tr>
                 );
               })}
@@ -252,20 +1067,14 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
         </div>
       )}
 
-      {/* Modal novo/editar */}
       {modal && (
         <ModalOverlay onClose={() => setModal(null)}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <div style={{ fontSize: 17, fontWeight: 700 }}>
-              {modal.mode === "new" ? (form.tipo === "receber" ? "Nova Conta a Receber" : "Nova Conta a Pagar") : "Editar Lançamento"}
-            </div>
-            <button onClick={() => setModal(null)} style={{ fontSize: 22, color: "#ccc", background: "transparent", border: "none", cursor: "pointer" }}>×</button>
-          </div>
+          <ModalHeader title={modal.mode === "new" ? (form.tipo === "receber" ? "Nova Conta a Receber" : "Nova Conta a Pagar") : "Editar Lançamento"} onClose={() => setModal(null)} />
           {confirmDel ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ fontSize: 14, marginBottom: 20 }}>Excluir este lançamento?</div>
               <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-                <button onClick={() => setConfirmDel(null)} style={{ padding: "9px 20px", borderRadius: 8, background: "#f0ede6", border: "none", cursor: "pointer", fontWeight: 600 }}>Cancelar</button>
+                <button onClick={() => setConfirmDel(null)} style={{ padding: "9px 20px", borderRadius: 8, background: "#f1f5f9", border: "none", cursor: "pointer", fontWeight: 600 }}>Cancelar</button>
                 <button onClick={() => del(form.id)} style={{ padding: "9px 20px", borderRadius: 8, background: "#dc2626", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600 }}>Excluir</button>
               </div>
             </div>
@@ -276,42 +1085,29 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
                 <div style={{ display: "flex", gap: 8 }}>
                   {[["receber", "↓ A Receber"], ["pagar", "↑ A Pagar"]].map(([v, l]) => (
                     <button key={v} onClick={() => setForm(f => ({ ...f, tipo: v, categoria: v === "receber" ? FIN_CATS_REC[0] : FIN_CATS_PAG[0] }))}
-                      style={{ flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13,
-                        background: form.tipo === v ? (v === "receber" ? "#16a34a" : "#dc2626") : "#f0ede6",
-                        color: form.tipo === v ? "#fff" : "#555" }}>{l}</button>
+                      style={{ flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, background: form.tipo === v ? (v === "receber" ? "#16a34a" : "#dc2626") : "#f1f5f9", color: form.tipo === v ? "#fff" : "#555" }}>{l}</button>
                   ))}
                 </div>
               </div>
-              <div><Label>Descrição *</Label><input value={form.descricao || ""} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Aluguel sala julho" style={inputStyle} /></div>
-              <div>
-                <Label>Categoria</Label>
-                <select value={form.categoria || ""} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))} style={inputStyle}>
-                  {(form.tipo === "receber" ? FIN_CATS_REC : FIN_CATS_PAG).map(c => <option key={c}>{c}</option>)}
-                </select>
-              </div>
+              <Field label="Descrição *"><input value={form.descricao || ""} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} style={inputStyle} /></Field>
+              <Field label="Categoria"><select value={form.categoria || ""} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))} style={inputStyle}>{(form.tipo === "receber" ? FIN_CATS_REC : FIN_CATS_PAG).map(c => <option key={c}>{c}</option>)}</select></Field>
               <div style={{ display: "flex", gap: 12 }}>
-                <div style={{ flex: 1 }}><Label>Valor (R$) *</Label><input type="number" value={form.valor || ""} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))} placeholder="0,00" style={inputStyle} /></div>
-                <div style={{ flex: 1 }}><Label>Vencimento *</Label><input type="date" value={form.vencimento || ""} onChange={e => setForm(f => ({ ...f, vencimento: e.target.value }))} style={inputStyle} /></div>
+                <div style={{ flex: 1 }}><Field label="Valor (R$) *"><input type="number" value={form.valor || ""} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))} style={inputStyle} /></Field></div>
+                <div style={{ flex: 1 }}><Field label="Vencimento *"><input type="date" value={form.vencimento || ""} onChange={e => setForm(f => ({ ...f, vencimento: e.target.value }))} style={inputStyle} /></Field></div>
               </div>
               <div>
                 <Label>Status</Label>
                 <div style={{ display: "flex", gap: 8 }}>
                   {[["pendente", "⏳ Pendente"], ["pago", "✅ Pago"]].map(([v, l]) => (
-                    <button key={v} onClick={() => setForm(f => ({ ...f, status: v }))}
-                      style={{ flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13,
-                        background: form.status === v ? "#1a1a1a" : "#f0ede6", color: form.status === v ? "#fff" : "#555" }}>{l}</button>
+                    <button key={v} onClick={() => setForm(f => ({ ...f, status: v }))} style={{ flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, background: form.status === v ? "#1e293b" : "#f1f5f9", color: form.status === v ? "#fff" : "#555" }}>{l}</button>
                   ))}
                 </div>
               </div>
-              <div><Label>Observação</Label><textarea value={form.obs || ""} onChange={e => setForm(f => ({ ...f, obs: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "none" }} /></div>
+              <Field label="Observação"><textarea value={form.obs || ""} onChange={e => setForm(f => ({ ...f, obs: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "none" }} /></Field>
               <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                {modal.mode === "edit" && (
-                  <button onClick={() => setConfirmDel(true)} style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", border: "1.5px solid #fecaca", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>🗑 Excluir</button>
-                )}
-                <button onClick={save} disabled={!form.descricao?.trim() || !form.valor || !form.vencimento}
-                  style={{ marginLeft: "auto", padding: "10px 24px", borderRadius: 9, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                    background: form.descricao?.trim() && form.valor && form.vencimento ? "#1a1a1a" : "#eee",
-                    color: form.descricao?.trim() && form.valor && form.vencimento ? "#fff" : "#aaa" }}>Salvar</button>
+                {modal.mode === "edit" && <button onClick={() => setConfirmDel(true)} style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", border: "1.5px solid #fecaca", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>🗑 Excluir</button>}
+                <button onClick={saveItem} disabled={!form.descricao?.trim() || !form.valor || !form.vencimento}
+                  style={{ marginLeft: "auto", padding: "10px 24px", borderRadius: 9, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer", background: form.descricao?.trim() && form.valor && form.vencimento ? "#2563EB" : "#eee", color: form.descricao?.trim() && form.valor && form.vencimento ? "#fff" : "#aaa" }}>Salvar</button>
               </div>
             </div>
           )}
@@ -321,1026 +1117,202 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
   );
 }
 
-// ─── Change password section ──────────────────────────────────────────────────
-function ChangePasswordSection() {
-  const [open, setOpen] = useState(false);
-  const [cur, setCur] = useState(""); const [n1, setN1] = useState(""); const [n2, setN2] = useState("");
-  const [newUser, setNewUser] = useState("");
-  const [msg, setMsg] = useState(null);
-
-  function save() {
-    const creds = load(STORAGE_KEYS.credentials, { user: "admin", pass: "geresala123" });
-    if (cur !== creds.pass) { setMsg({ ok: false, text: "Senha atual incorreta." }); return; }
-    if (n1.length < 4) { setMsg({ ok: false, text: "Nova senha deve ter no mínimo 4 caracteres." }); return; }
-    if (n1 !== n2) { setMsg({ ok: false, text: "As novas senhas não coincidem." }); return; }
-    const user = newUser.trim() || creds.user;
-    localStorage.setItem(STORAGE_KEYS.credentials, JSON.stringify({ user, pass: n1 }));
-    setMsg({ ok: true, text: "Acesso atualizado com sucesso!" });
-    setCur(""); setN1(""); setN2(""); setNewUser("");
-    setTimeout(() => { setMsg(null); setOpen(false); }, 2000);
-  }
-
-  return (
-    <div style={{ marginTop: 40, background: "#fff", borderRadius: 14, border: "1.5px solid #e5e0d6", padding: 24, maxWidth: 480 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>🔒 Acesso ao sistema</div>
-          <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>Altere usuário e senha de login</div>
-        </div>
-        <button onClick={() => { setOpen(o => !o); setMsg(null); }}
-          style={{ background: "#f5f3ee", border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-          {open ? "Cancelar" : "Alterar"}
-        </button>
-      </div>
-      {open && (
-        <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-          {[["Novo usuário (opcional)", newUser, setNewUser, "text", "Deixe em branco para manter o atual"],
-            ["Senha atual *", cur, setCur, "password", ""],
-            ["Nova senha *", n1, setN1, "password", "Mínimo 4 caracteres"],
-            ["Confirmar nova senha *", n2, setN2, "password", ""]
-          ].map(([label, val, set, type, hint]) => (
-            <div key={label}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 4, textTransform: "uppercase", letterSpacing: .8 }}>{label}</div>
-              <input type={type} value={val} onChange={e => { set(e.target.value); setMsg(null); }} placeholder={hint}
-                style={{ width: "100%", boxSizing: "border-box", border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "9px 12px", fontSize: 13 }} />
-            </div>
-          ))}
-          {msg && <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 7, background: msg.ok ? "#f0fdf4" : "#fff0f0", color: msg.ok ? "#16a34a" : "#dc2626" }}>{msg.ok ? "✅" : "⚠️"} {msg.text}</div>}
-          <button onClick={save} style={{ background: "#1a1a1a", color: "#fff", border: "none", borderRadius: 9, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Salvar acesso</button>
-        </div>
-      )}
-    </div>
-  );
+// ═══════════════════════════ RELATÓRIOS ══════════════════════════════════════
+function exportCSV(rows, headers, filename) {
+  const lines = [headers.join(";"), ...rows.map(r => r.join(";"))];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
 }
 
-// ─── Login screen ─────────────────────────────────────────────────────────────
-function LoginScreen({ onLogin }) {
-  const [user, setUser] = useState("");
-  const [pass, setPass] = useState("");
-  const [err, setErr] = useState("");
-  const [show, setShow] = useState(false);
+function RelatoriosTab({ pedidos, clientes, produtos }) {
+  const [mes, setMes] = useState(() => todayISO().slice(0, 7));
+  const faturados = pedidos.filter(p => p.status === "faturado" && monthKeyOf(p.data) === mes);
+  const totalMes = faturados.reduce((s, p) => s + pedidoTotal(p), 0);
 
-  function attempt() {
-    const creds = load(STORAGE_KEYS.credentials, { user: "admin", pass: "geresala123" });
-    if (user.trim() === creds.user && pass === creds.pass) {
-      onLogin();
-    } else {
-      setErr("Usuário ou senha incorretos.");
-      setPass("");
-    }
-  }
+  const porCliente = {};
+  faturados.forEach(p => { const c = clientes.find(x => x.id === p.clienteId); const nome = c?.nomeFantasia || c?.razaoSocial || "?"; porCliente[nome] = (porCliente[nome] || 0) + pedidoTotal(p); });
+  const rankingClientes = Object.entries(porCliente).sort((a, b) => b[1] - a[1]);
+
+  const porProduto = {};
+  faturados.forEach(p => p.itens.forEach(it => {
+    const prod = produtos.find(x => x.id === it.produtoId);
+    const nome = prod?.nome || "?";
+    if (!porProduto[nome]) porProduto[nome] = { qtd: 0, total: 0 };
+    porProduto[nome].qtd += it.qtd; porProduto[nome].total += it.qtd * it.precoUnit;
+  }));
+  const rankingProdutos = Object.entries(porProduto).sort((a, b) => b[1].total - a[1].total);
+
+  const [y, m] = mes.split("-");
+  const mesLabel = `${MONTH_NAMES[parseInt(m) - 1]} ${y}`;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f3ee", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ background: "#fff", borderRadius: 18, padding: "44px 40px", width: 360, boxShadow: "0 8px 40px #0001", border: "1.5px solid #e5e0d6" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
-          <div style={{ width: 40, height: 40, background: "#1a1a1a", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏢</div>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>GereSala</div>
-            <div style={{ fontSize: 11, color: "#aaa" }}>Sublocação Profissional</div>
-          </div>
+    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 28px 40px" }}>
+      <PageHeader title="Relatórios" sub={`Desempenho de vendas — ${mesLabel}`} action={
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input type="month" value={mes} onChange={e => setMes(e.target.value)} style={{ ...inputStyle, width: "auto" }} />
+          <button onClick={() => exportCSV(faturados.map(p => [p.numero, fmtDateBR(p.data), (clientes.find(c => c.id === p.clienteId)?.razaoSocial || "?"), pedidoTotal(p).toFixed(2)]), ["Nº Pedido", "Data", "Cliente", "Total"], `vendas_${mes}.csv`)}
+            style={{ padding: "9px 16px", borderRadius: 9, background: "#f1f5f9", border: "1.5px solid #e2e8f0", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>⬇ Exportar CSV</button>
         </div>
-        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 20, color: "#333" }}>Acesso ao sistema</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: .8 }}>Usuário</div>
-            <input value={user} onChange={e => { setUser(e.target.value); setErr(""); }} onKeyDown={e => e.key === "Enter" && attempt()}
-              placeholder="Digite seu usuário" autoFocus
-              style={{ width: "100%", boxSizing: "border-box", border: "1.5px solid #e5e0d6", borderRadius: 9, padding: "11px 14px", fontSize: 14, outline: "none" }} />
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: .8 }}>Senha</div>
-            <div style={{ position: "relative" }}>
-              <input value={pass} onChange={e => { setPass(e.target.value); setErr(""); }} onKeyDown={e => e.key === "Enter" && attempt()}
-                type={show ? "text" : "password"} placeholder="Digite sua senha"
-                style={{ width: "100%", boxSizing: "border-box", border: `1.5px solid ${err ? "#dc2626" : "#e5e0d6"}`, borderRadius: 9, padding: "11px 40px 11px 14px", fontSize: 14, outline: "none" }} />
-              <button onClick={() => setShow(s => !s)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 15, color: "#aaa" }}>{show ? "🙈" : "👁"}</button>
+      } />
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: 14, marginBottom: 24 }}>
+        <StatCard label="Total faturado no mês" value={fmtBRL(totalMes)} color="#16a34a" bg="#f0fdf4" border="#bbf7d0" />
+        <StatCard label="Pedidos faturados" value={faturados.length} color="#2563EB" bg="#eff6ff" border="#bfdbfe" />
+        <StatCard label="Ticket médio" value={fmtBRL(faturados.length ? totalMes / faturados.length : 0)} color="#7c3aed" bg="#f5f3ff" border="#ddd6fe" />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div style={{ ...cardBox, padding: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>Ranking por cliente</div>
+          {rankingClientes.length === 0 ? <div style={{ fontSize: 12, color: "#cbd5e1" }}>Sem vendas faturadas no período</div> : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {rankingClientes.map(([nome, total], i) => (
+                <div key={nome} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }}>
+                  <span><span style={{ color: "#cbd5e1", fontFamily: "'JetBrains Mono',monospace", marginRight: 6 }}>{i + 1}.</span>{nome}</span>
+                  <span style={{ fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{fmtBRL(total)}</span>
+                </div>
+              ))}
             </div>
-          </div>
-          {err && <div style={{ fontSize: 12, color: "#dc2626", background: "#fff0f0", padding: "8px 12px", borderRadius: 7 }}>⚠️ {err}</div>}
-          <button onClick={attempt} disabled={!user.trim() || !pass}
-            style={{ background: user.trim() && pass ? "#1a1a1a" : "#eee", color: user.trim() && pass ? "#fff" : "#aaa", border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 700, cursor: user.trim() && pass ? "pointer" : "default", marginTop: 4, transition: "all .15s" }}>
-            Entrar
-          </button>
+          )}
         </div>
-        <div style={{ marginTop: 24, fontSize: 11, color: "#ccc", textAlign: "center" }}>
-          Acesso restrito · GereSala CRM
+        <div style={{ ...cardBox, padding: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>Ranking por produto</div>
+          {rankingProdutos.length === 0 ? <div style={{ fontSize: 12, color: "#cbd5e1" }}>Sem vendas faturadas no período</div> : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {rankingProdutos.map(([nome, d], i) => (
+                <div key={nome} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5 }}>
+                  <span><span style={{ color: "#cbd5e1", fontFamily: "'JetBrains Mono',monospace", marginRight: 6 }}>{i + 1}.</span>{nome} <span style={{ color: "#94a3b8" }}>({d.qtd})</span></span>
+                  <span style={{ fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{fmtBRL(d.total)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
+// ═══════════════════════════ CONFIGURAÇÕES ═══════════════════════════════════
+function ConfiguracoesTab({ empresa, setEmpresa, showToast }) {
+  const [form, setForm] = useState(empresa);
+  function saveEmpresa() { setEmpresa(form); showToast("Dados da empresa salvos!"); }
+
+  return (
+    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 28px 40px" }}>
+      <PageHeader title="Configurações" sub="Dados da empresa e acesso ao sistema" />
+      <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 480 }}>
+        <div style={{ ...cardBox, padding: 24 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>🏢 Dados da empresa</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Field label="Razão Social"><input value={form.nome || ""} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="CNPJ"><input value={form.cnpj || ""} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} style={inputStyle} /></Field>
+            <Field label="Cidade/UF"><input value={form.cidade || ""} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} style={inputStyle} /></Field>
+            <button onClick={saveEmpresa} style={{ background: "#1e293b", color: "#fff", border: "none", borderRadius: 9, padding: "11px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Salvar dados</button>
+          </div>
+        </div>
+        <ChangePasswordSection />
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════ APP SHELL ═══════════════════════════════════════
+const NAV = [
+  ["dashboard", "📊", "Dashboard"],
+  ["clientes", "👥", "Clientes"],
+  ["produtos", "📦", "Produtos"],
+  ["pedidos", "🧾", "Pedidos"],
+  ["compras", "🚚", "Compras"],
+  ["financeiro", "💰", "Financeiro"],
+  ["relatorios", "📈", "Relatórios"],
+  ["configuracoes", "⚙️", "Configurações"],
+];
 
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(() => sessionStorage.getItem("gs_session") === "1");
-  if (!loggedIn) return <LoginScreen onLogin={() => { sessionStorage.setItem("gs_session", "1"); setLoggedIn(true); }} />;
-  return <AppInner onLogout={() => { sessionStorage.removeItem("gs_session"); setLoggedIn(false); }} />;
+  const [loggedIn, setLoggedIn] = useState(() => sessionStorage.getItem("df_session") === "1");
+  if (!loggedIn) return <LoginScreen onLogin={() => { sessionStorage.setItem("df_session", "1"); setLoggedIn(true); }} />;
+  return <AppInner onLogout={() => { sessionStorage.removeItem("df_session"); setLoggedIn(false); }} />;
 }
 
 function AppInner({ onLogout }) {
-
-  const [rooms, setRooms] = useState(() => load(STORAGE_KEYS.rooms, DEFAULT_ROOMS));
-  const [bookings, setBookings] = useState(() => load(STORAGE_KEYS.bookings, {}));
-  const [professionals, setProfessionals] = useState(() => load(STORAGE_KEYS.professionals, []));
-  const [prices, setPrices] = useState(() => load(STORAGE_KEYS.prices, { 1: 80, 2: 80 }));
-
-  const [tab, setTab] = useState("agenda");
+  const [clientes, setClientes] = useState(() => load(STORAGE_KEYS.clientes, DEFAULT_CLIENTES));
+  const [produtos, setProdutos] = useState(() => load(STORAGE_KEYS.produtos, DEFAULT_PRODUTOS));
+  const [pedidos, setPedidos] = useState(() => load(STORAGE_KEYS.pedidos, []));
+  const [fornecedores, setFornecedores] = useState(() => load(STORAGE_KEYS.fornecedores, DEFAULT_FORNECEDORES));
+  const [compras, setCompras] = useState(() => load(STORAGE_KEYS.compras, []));
   const [financeiro, setFinanceiro] = useState(() => load(STORAGE_KEYS.financeiro, []));
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState(toKey(new Date()));
-  const [viewMode, setViewMode] = useState("day");
-  const [modal, setModal] = useState(null);
-  const [form, setForm] = useState({});
+  const [empresa, setEmpresa] = useState(() => load(STORAGE_KEYS.empresa, { nome: "Minha Distribuidora Ltda", cnpj: "", cidade: "" }));
+  const [tab, setTab] = useState("dashboard");
   const [toast, setToast] = useState(null);
-  const [confirmDel, setConfirmDel] = useState(null);
-  const [reportMonth, setReportMonth] = useState(new Date().getMonth());
-  const [reportYear, setReportYear] = useState(new Date().getFullYear());
-  const [profSearch, setProfSearch] = useState("");
-  const [reportProfFilter, setReportProfFilter] = useState("");
 
-  const weekDays = getWeekDays(currentDate);
-
-  useEffect(() => { save(STORAGE_KEYS.bookings, bookings); }, [bookings]);
+  useEffect(() => { save(STORAGE_KEYS.clientes, clientes); }, [clientes]);
+  useEffect(() => { save(STORAGE_KEYS.produtos, produtos); }, [produtos]);
+  useEffect(() => { save(STORAGE_KEYS.pedidos, pedidos); }, [pedidos]);
+  useEffect(() => { save(STORAGE_KEYS.fornecedores, fornecedores); }, [fornecedores]);
+  useEffect(() => { save(STORAGE_KEYS.compras, compras); }, [compras]);
   useEffect(() => { save(STORAGE_KEYS.financeiro, financeiro); }, [financeiro]);
-  useEffect(() => { save(STORAGE_KEYS.professionals, professionals); }, [professionals]);
-  useEffect(() => { save(STORAGE_KEYS.rooms, rooms); }, [rooms]);
-  useEffect(() => { save(STORAGE_KEYS.prices, prices); }, [prices]);
+  useEffect(() => { save(STORAGE_KEYS.empresa, empresa); }, [empresa]);
 
-  const showToast = useCallback((msg, type = "ok") => {
-    setToast({ msg, type }); setTimeout(() => setToast(null), 3000);
-  }, []);
+  const showToast = useCallback((msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }, []);
 
-  // ── Booking helpers ───────────────────────────────────────────────────────
-  function hourlyRateFor(roomId, profId, profName) {
-    let prof = profId ? professionals.find(p => p.id === profId) : null;
-    if (!prof && profName) {
-      prof = professionals.find(p => p.name.trim().toLowerCase() === profName.trim().toLowerCase());
-    }
-    if (prof && prof.hourlyRate != null && prof.hourlyRate !== "") return prof.hourlyRate;
-    return prices[roomId] || 0;
-  }
-  function bookingKey(day, roomId, hour) { return `${day}_${roomId}_${hour}`; }
-  function getBooking(day, roomId, hour) { return bookings[bookingKey(day, roomId, hour)] || null; }
-
-  // Returns the booking that occupies this slot (start or continuation of multi-hour)
-  function getOccupyingBooking(day, roomId, hour) {
-    const direct = getBooking(day, roomId, hour);
-    if (direct) return { booking: direct, isStart: true };
-    const idx = hourToIndex(hour);
-    for (let i = idx - 1; i >= 0; i--) {
-      const b = getBooking(day, roomId, HOURS[i]);
-      if (b) {
-        const dur = b.duration ?? 1;
-        if (i + dur > idx) return { booking: b, isStart: false, startHour: HOURS[i] };
-        break;
-      }
-    }
-    return null;
-  }
-
-  function saveBooking() {
-    if (!form.name?.trim()) return;
-    const dur = form.duration ?? 1;
-    const startIdx = hourToIndex(form.hour);
-    for (let i = startIdx; i < startIdx + dur; i++) {
-      const h = HOURS[i];
-      if (!h) { showToast("Duração ultrapassa o horário disponível.", "err"); return; }
-      const occ = getOccupyingBooking(form.day, form.roomId, h);
-      if (occ && !(occ.isStart && form.hour === h)) {
-        showToast(`Conflito no horário ${h}!`, "err"); return;
-      }
-    }
-    if (modal?.existing) {
-      const oldB = bookings[bookingKey(form.day, form.roomId, form.hour)];
-      const oldDur = oldB?.duration ?? 1;
-      if (oldDur !== dur) {
-        setBookings(b => {
-          const n = { ...b };
-          for (let i = startIdx + 1; i < startIdx + oldDur; i++) {
-            delete n[bookingKey(form.day, form.roomId, HOURS[i])];
-          }
-          return n;
-        });
-      }
-    }
-    const key = bookingKey(form.day, form.roomId, form.hour);
-    setBookings(b => ({
-      ...b,
-      [key]: {
-        name: form.name.trim(),
-        type: form.type || SPECIALTIES[0],
-        phone: form.phone || "",
-        profId: form.profId || null,
-        notes: form.notes || "",
-        duration: dur,
-        status: form.status || "confirmed",
-      },
-    }));
-    setModal(null);
-    showToast("Reserva salva!");
-  }
-
-  function deleteBooking(day, roomId, hour) {
-    const b = getBooking(day, roomId, hour);
-    const dur = b?.duration ?? 1;
-    const startIdx = hourToIndex(hour);
-    setBookings(prev => {
-      const n = { ...prev };
-      for (let i = startIdx; i < startIdx + dur; i++) {
-        delete n[bookingKey(day, roomId, HOURS[i])];
-      }
-      return n;
-    });
-    setConfirmDel(null); setModal(null);
-    showToast("Reserva cancelada.", "err");
-  }
-
-  // Repeats a professional's bookings from one month to the next, same day-of-month.
-  // Skips slots that already have a conflicting booking; returns counts for feedback.
-  function repeatProfessionalToNextMonth(profName, fromMonth, fromYear) {
-    const next = new Date(fromYear, fromMonth + 1, 1);
-    const targetMonth = next.getMonth();
-    const targetYear = next.getFullYear();
-    const sourceRows = Object.entries(bookings).filter(([key, b]) => {
-      const [day, roomId, hour] = key.split("_");
-      const dt = new Date(day + "T12:00:00");
-      if (dt.getMonth() !== fromMonth || dt.getFullYear() !== fromYear) return false;
-      if (b.name !== profName) return false;
-      const startIdx = hourToIndex(hour);
-      for (let i = startIdx - 1; i >= 0; i--) {
-        if (getBooking(day, parseInt(roomId), HOURS[i])) return false;
-      }
-      return true;
-    });
-
-    let added = 0, skipped = 0;
-    setBookings(prev => {
-      const n = { ...prev };
-      sourceRows.forEach(([key, b]) => {
-        const [day, roomIdStr, hour] = key.split("_");
-        const roomId = parseInt(roomIdStr);
-        const dt = new Date(day + "T12:00:00");
-        const targetDate = new Date(targetYear, targetMonth, dt.getDate());
-        if (targetDate.getMonth() !== targetMonth) { skipped++; return; } // dia não existe no mês seguinte
-        const targetDay = toKey(targetDate);
-        const dur = b.duration ?? 1;
-        const startIdx = hourToIndex(hour);
-
-        for (let i = startIdx; i < startIdx + dur; i++) {
-          const h = HOURS[i];
-          if (!h || n[bookingKey(targetDay, roomId, h)]) { skipped++; return; }
-        }
-        n[bookingKey(targetDay, roomId, hour)] = { ...b };
-        added++;
-      });
-      return n;
-    });
-
-    showToast(`${added} reserva${added !== 1 ? "s" : ""} repetida${added !== 1 ? "s" : ""} para ${MONTH_NAMES[targetMonth]}${skipped ? ` · ${skipped} ignorada${skipped !== 1 ? "s" : ""} por conflito` : ""}.`, added ? "ok" : "err");
-    if (added) { setReportMonth(targetMonth); setReportYear(targetYear); }
-  }
-
-  // ── Professional helpers ──────────────────────────────────────────────────
-  function saveProfessional() {
-    if (!form.name?.trim()) return;
-    if (form.id) {
-      setProfessionals(p => p.map(x => x.id === form.id ? { ...form } : x));
-    } else {
-      setProfessionals(p => [...p, { ...form, id: Date.now() }]);
-    }
-    setModal(null); showToast("Profissional salvo!");
-  }
-
-  function deleteProfessional(id) {
-    setProfessionals(p => p.filter(x => x.id !== id));
-    setConfirmDel(null); setModal(null);
-    showToast("Profissional removido.", "err");
-  }
-
-  // ── Room helpers ──────────────────────────────────────────────────────────
-  function saveRoom() {
-    if (!form.name?.trim()) return;
-    if (form.id) {
-      setRooms(r => r.map(x => x.id === form.id ? { ...form } : x));
-    } else {
-      const newId = Date.now();
-      setRooms(r => [...r, { ...form, id: newId }]);
-      setPrices(p => ({ ...p, [newId]: 80 }));
-    }
-    setModal(null); showToast("Sala salva!");
-  }
-
-  // ── Report data ───────────────────────────────────────────────────────────
-  const reportData = (() => {
-    const rows = [];
-    Object.entries(bookings).forEach(([key, b]) => {
-      const [day, roomId, hour] = key.split("_");
-      const dt = new Date(day + "T12:00:00");
-      if (dt.getMonth() !== reportMonth || dt.getFullYear() !== reportYear) return;
-      const room = rooms.find(r => r.id === parseInt(roomId));
-      const dur = b.duration ?? 1;
-      const price = hourlyRateFor(parseInt(roomId), b.profId, b.name) * dur;
-      const statusObj = STATUSES.find(s => s.value === (b.status || "confirmed"));
-      rows.push({ day, roomId: parseInt(roomId), hour, name: b.name, type: b.type, phone: b.phone, room: room?.name || "?", price, color: room?.color || "#888", duration: dur, status: b.status || "confirmed", statusLabel: statusObj?.label || "Confirmado" });
-    });
-    rows.sort((a, b) => (a.day + a.hour) < (b.day + b.hour) ? -1 : 1);
-    const filteredRows = reportProfFilter
-      ? rows.filter(r => r.name.toLowerCase().includes(reportProfFilter.toLowerCase()))
-      : rows;
-    const filteredTotal = filteredRows.reduce((sum, r) => sum + r.price, 0);
-    const byRoom = {};
-    rooms.forEach(r => { byRoom[r.id] = { name: r.name, color: r.color, count: 0, revenue: 0 }; });
-    filteredRows.forEach(r => { if (byRoom[r.roomId]) { byRoom[r.roomId].count++; byRoom[r.roomId].revenue += r.price; } });
-    return { rows: filteredRows, total: filteredTotal, byRoom };
-  })();
-
-  const reportProfNames = [...new Set(Object.values(bookings).map(b => b.name))].sort();
-
-  // ── Render helpers ────────────────────────────────────────────────────────
-  const todayKey = toKey(new Date());
-  const todayBookings = Object.entries(bookings).filter(([k]) => k.startsWith(todayKey));
-  const totalSlots = rooms.length * HOURS.length;
-  const todayReserved = todayBookings.length;
-
-  function openBookingModal(day, roomId, hour, existing) {
-    if (!existing) {
-      const occ = getOccupyingBooking(day, roomId, hour);
-      if (occ && !occ.isStart) {
-        openBookingModal(day, roomId, occ.startHour, bookings[bookingKey(day, roomId, occ.startHour)]);
-        return;
-      }
-    }
-    setForm(existing
-      ? { ...existing, day, roomId, hour }
-      : { day, roomId, hour, name: "", type: SPECIALTIES[0], phone: "", profId: null, notes: "", duration: 1, status: "confirmed" }
-    );
-    setModal({ type: "booking", existing: !!existing });
-  }
-
-  const displayDays = viewMode === "week"
-    ? weekDays
-    : [weekDays.find(d => toKey(d) === selectedDay) || new Date(selectedDay + "T12:00:00")];
-
-  const filteredProfessionals = professionals.filter(p =>
-    p.name.toLowerCase().includes(profSearch.toLowerCase()) ||
-    (p.specialty || "").toLowerCase().includes(profSearch.toLowerCase())
-  );
-
-  // ─── UI ───────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F3EE", fontFamily: "'Outfit', sans-serif", color: "#1a1a1a" }}>
+    <div style={{ minHeight: "100vh", background: "#F1F5F9", fontFamily: "'Outfit', sans-serif", color: "#0f172a", display: "flex" }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0;}
         ::-webkit-scrollbar{width:5px;height:5px;}
-        ::-webkit-scrollbar-track{background:#ede9e0;}
-        ::-webkit-scrollbar-thumb{background:#c5bfb3;border-radius:3px;}
+        ::-webkit-scrollbar-track{background:#e2e8f0;}
+        ::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px;}
         .btn{cursor:pointer;border:none;transition:all .15s;font-family:'Outfit',sans-serif;}
-        .btn:hover{filter:brightness(.93);}
+        .btn:hover{filter:brightness(.94);}
         .btn:active{transform:scale(.97);}
-        .slot{cursor:pointer;transition:all .15s;}
-        .slot:hover{background:#ede9e0 !important;}
-        .slot-cont{cursor:pointer;transition:background .15s;}
-        .tab{cursor:pointer;transition:all .15s;border:none;background:transparent;font-family:'Outfit',sans-serif;}
-        .nav-btn{cursor:pointer;border:none;background:transparent;transition:all .15s;font-family:'Outfit',sans-serif;}
-        .nav-btn:hover{background:#ede9e0;border-radius:6px;}
+        .nav-item{cursor:pointer;transition:all .15s;}
         input,select,textarea{font-family:'Outfit',sans-serif;outline:none;}
-        input:focus,select:focus,textarea:focus{border-color:#1a1a1a !important;}
+        input:focus,select:focus,textarea:focus{border-color:#2563EB !important;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         .fade-up{animation:fadeUp .2s ease}
         .toast-anim{animation:toastIn .2s ease}
-        tr:hover td{background:#f5f1e8 !important;}
-        .day-pill:hover{background:#e8e3d8 !important;}
-        .prof-card:hover{border-color:#c5bfb3 !important;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+        tr:hover td{background:#f8fafc !important;}
       `}</style>
 
-      {/* ── TOP NAV ── */}
-      <div style={{ background: "#fff", borderBottom: "1.5px solid #e5e0d6", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 58, position: "sticky", top: 0, zIndex: 50 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 34, height: 34, background: "#1a1a1a", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🏢</div>
+      {/* Sidebar */}
+      <div style={{ width: 224, background: "#0f172a", color: "#fff", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
+        <div style={{ padding: "22px 20px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid #1e293b" }}>
+          <div style={{ width: 34, height: 34, background: "#2563EB", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>📦</div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.3px" }}>GereSala</div>
-            <div style={{ fontSize: 10, color: "#999", fontFamily: "'JetBrains Mono', monospace" }}>Sublocação Profissional</div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>DistriFlow</div>
+            <div style={{ fontSize: 10, color: "#64748b", fontFamily: "'JetBrains Mono',monospace" }}>Gestão para Distribuidoras</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 2 }}>
-          {[["agenda", "📅 Agenda"], ["profissionais", "👤 Profissionais"], ["relatorio", "📊 Relatório"], ["financeiro", "💰 Financeiro"], ["configuracoes", "⚙️ Salas"]].map(([id, label]) => (
-            <button key={id} className="tab" onClick={() => setTab(id)}
-              style={{ padding: "7px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === id ? 600 : 400, background: tab === id ? "#1a1a1a" : "transparent", color: tab === id ? "#fff" : "#666" }}>
-              {label}
-            </button>
+        <div style={{ flex: 1, padding: "14px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+          {NAV.map(([id, icon, label]) => (
+            <div key={id} className="nav-item" onClick={() => setTab(id)}
+              style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 9, fontSize: 13.5, fontWeight: tab === id ? 600 : 400, background: tab === id ? "#2563EB" : "transparent", color: tab === id ? "#fff" : "#94a3b8" }}>
+              <span style={{ fontSize: 15 }}>{icon}</span>{label}
+            </div>
           ))}
         </div>
-        <button onClick={onLogout}
-          style={{ marginLeft: 16, background: "#f5f3ee", border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 600, color: "#666", cursor: "pointer" }}>
-          🔒 Sair
-        </button>
+        <div style={{ padding: 16, borderTop: "1px solid #1e293b" }}>
+          <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8, fontFamily: "'JetBrains Mono',monospace" }}>{empresa.nome}</div>
+          <button onClick={onLogout} style={{ width: "100%", background: "#1e293b", border: "none", borderRadius: 8, padding: "9px 0", fontSize: 12, fontWeight: 600, color: "#cbd5e1", cursor: "pointer" }}>🔒 Sair</button>
+        </div>
       </div>
 
-      {/* ══════════════════════ AGENDA ══════════════════════ */}
-      {tab === "agenda" && (
-        <div style={{ display: "flex", height: "calc(100vh - 58px)" }}>
-          {/* Sidebar */}
-          <div style={{ width: 210, background: "#fff", borderRight: "1.5px solid #e5e0d6", padding: 20, display: "flex", flexDirection: "column", gap: 20, overflowY: "auto", flexShrink: 0 }}>
-            <div>
-              <div style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8, fontFamily: "'JetBrains Mono',monospace" }}>Hoje</div>
-              <div style={{ fontSize: 32, fontWeight: 700, lineHeight: 1 }}>{todayReserved}</div>
-              <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>de {totalSlots} horários</div>
-              <div style={{ marginTop: 8, background: "#eee", borderRadius: 4, height: 5 }}>
-                <div style={{ width: `${Math.round((todayReserved / totalSlots) * 100)}%`, height: "100%", background: "#16A34A", borderRadius: 4, transition: "width .4s" }} />
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8, fontFamily: "'JetBrains Mono',monospace" }}>Salas</div>
-              {rooms.map(r => (
-                <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 0" }}>
-                  <div style={{ width: 10, height: 10, borderRadius: 3, background: r.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: "#555" }}>{r.name}</span>
-                  <span style={{ marginLeft: "auto", fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: "#bbb" }}>R${prices[r.id] || 0}/h</span>
-                </div>
-              ))}
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8, fontFamily: "'JetBrains Mono',monospace" }}>Reservas hoje</div>
-              {todayBookings.length === 0 && <div style={{ fontSize: 12, color: "#ccc" }}>Nenhuma</div>}
-              {todayBookings.sort((a, b) => a[0] < b[0] ? -1 : 1).slice(0, 8).map(([key, b]) => {
-                const [, roomId, hour] = key.split("_");
-                const room = rooms.find(r => r.id === parseInt(roomId));
-                const statusObj = STATUSES.find(s => s.value === (b.status || "confirmed"));
-                return (
-                  <div key={key} style={{ marginBottom: 10, cursor: "pointer" }} onClick={() => { setTab("agenda"); openBookingModal(todayKey, parseInt(roomId), hour, b); }}>
-                    <div style={{ fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: room?.color || "#888" }}>{hour} · {room?.name}</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "#1a1a1a" }}>{b.name}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                      <span style={{ fontSize: 10, color: "#aaa" }}>{b.type}</span>
-                      {b.duration > 1 && <span style={{ fontSize: 10, color: "#888", background: "#f0ede6", padding: "0 4px", borderRadius: 3 }}>{b.duration}h</span>}
-                      {statusObj && <span style={{ fontSize: 10, color: statusObj.color, background: statusObj.bg, padding: "0 4px", borderRadius: 3 }}>{statusObj.label}</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0, overflowY: "auto" }}>
+        {tab === "dashboard" && <DashboardTab clientes={clientes} produtos={produtos} pedidos={pedidos} financeiro={financeiro} />}
+        {tab === "clientes" && <ClientesTab clientes={clientes} setClientes={setClientes} showToast={showToast} />}
+        {tab === "produtos" && <ProdutosTab produtos={produtos} setProdutos={setProdutos} showToast={showToast} />}
+        {tab === "pedidos" && <PedidosTab pedidos={pedidos} setPedidos={setPedidos} clientes={clientes} produtos={produtos} setProdutos={setProdutos} setFinanceiro={setFinanceiro} showToast={showToast} />}
+        {tab === "compras" && <ComprasTab fornecedores={fornecedores} setFornecedores={setFornecedores} compras={compras} setCompras={setCompras} produtos={produtos} setProdutos={setProdutos} setFinanceiro={setFinanceiro} showToast={showToast} />}
+        {tab === "financeiro" && <FinanceiroTab financeiro={financeiro} setFinanceiro={setFinanceiro} showToast={showToast} />}
+        {tab === "relatorios" && <RelatoriosTab pedidos={pedidos} clientes={clientes} produtos={produtos} />}
+        {tab === "configuracoes" && <ConfiguracoesTab empresa={empresa} setEmpresa={setEmpresa} showToast={showToast} />}
+      </div>
 
-          {/* Grid */}
-          <div style={{ flex: 1, overflowX: "auto", overflowY: "auto", display: "flex", flexDirection: "column" }}>
-            {/* Toolbar */}
-            <div style={{ background: "#fff", borderBottom: "1.5px solid #e5e0d6", padding: "10px 20px", display: "flex", gap: 8, alignItems: "center", flexShrink: 0, flexWrap: "wrap" }}>
-              <button className="btn" onClick={() => { setCurrentDate(new Date()); setSelectedDay(toKey(new Date())); }}
-                style={{ background: "#f0ede6", padding: "6px 13px", borderRadius: 7, fontSize: 12, fontWeight: 500 }}>Hoje</button>
-              <button className="nav-btn btn" onClick={() => setCurrentDate(viewMode === "month" ? addMonths(currentDate, -1) : addDays(currentDate, -7))} style={{ padding: "6px 10px", borderRadius: 7, fontSize: 14 }}>‹</button>
-              <button className="nav-btn btn" onClick={() => setCurrentDate(viewMode === "month" ? addMonths(currentDate, 1) : addDays(currentDate, 7))} style={{ padding: "6px 10px", borderRadius: 7, fontSize: 14 }}>›</button>
-              <span style={{ fontSize: 13, color: "#777", fontFamily: "'JetBrains Mono',monospace", marginLeft: 4 }}>{viewMode === "month" ? `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}` : monthLabel(weekDays[0])}</span>
-              <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-                {[["day", "Dia"], ["week", "Semana"], ["month", "Mês"]].map(([v, l]) => (
-                  <button key={v} className="btn" onClick={() => setViewMode(v)}
-                    style={{ background: viewMode === v ? "#1a1a1a" : "#f0ede6", color: viewMode === v ? "#fff" : "#555", padding: "6px 13px", borderRadius: 7, fontSize: 12, fontWeight: 500 }}>{l}</button>
-                ))}
-              </div>
-            </div>
-
-            {/* ── Month view ── */}
-            {viewMode === "month" && (() => {
-              const grid = getMonthGrid(currentDate);
-              const todayK = toKey(new Date());
-              return (
-                <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
-                  {/* Weekday header */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
-                    {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map(d => (
-                      <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: "#bbb", padding: "4px 0", fontFamily: "'JetBrains Mono',monospace" }}>{d}</div>
-                    ))}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
-                    {grid.map(({ date, curr }, i) => {
-                      const dk = toKey(date);
-                      const isToday = dk === todayK;
-                      const isSel = dk === selectedDay;
-                      const dayBookings = Object.entries(bookings).filter(([k]) => k.startsWith(dk + "_"));
-                      const byRoom = rooms.map(r => ({
-                        color: r.color,
-                        count: dayBookings.filter(([k]) => k.includes(`_${r.id}_`)).length,
-                      }));
-                      return (
-                        <div key={i} onClick={() => { setSelectedDay(dk); setCurrentDate(date); setViewMode("day"); }}
-                          style={{ minHeight: 80, borderRadius: 10, border: isSel ? "2px solid #1a1a1a" : isToday ? "2px solid #16a34a" : "1.5px solid #e5e0d6", background: curr ? "#fff" : "#f9f8f5", cursor: "pointer", padding: "8px 10px", transition: "all .15s", opacity: curr ? 1 : 0.4 }}>
-                          <div style={{ fontSize: 13, fontWeight: isToday ? 700 : 500, color: isToday ? "#16a34a" : isSel ? "#1a1a1a" : "#555", marginBottom: 6 }}>{date.getDate()}</div>
-                          {dayBookings.length > 0 && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                              {byRoom.filter(r => r.count > 0).map((r, j) => (
-                                <div key={j} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                  <div style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
-                                  <span style={{ fontSize: 11, color: "#666" }}>{r.count} reserva{r.count > 1 ? "s" : ""}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Day tabs – full week Mon–Sun */}
-            {viewMode !== "month" && <div style={{ display: "flex", background: "#faf9f6", borderBottom: "1.5px solid #e5e0d6", flexShrink: 0 }}>
-              <div style={{ width: 56, flexShrink: 0, borderRight: "1px solid #e5e0d6" }} />
-              {weekDays.map(d => {
-                const ds = toKey(d);
-                const isSel = ds === selectedDay;
-                const isToday = ds === todayKey;
-                const dayBookings = Object.keys(bookings).filter(k => k.startsWith(ds)).length;
-                return (
-                  <div key={ds} className="day-pill" onClick={() => { setSelectedDay(ds); setViewMode("day"); }}
-                    style={{ flex: 1, padding: "8px 6px", textAlign: "center", borderRight: "1px solid #e5e0d6", cursor: "pointer", background: isSel ? "#1a1a1a" : "transparent", minWidth: 70, transition: "all .15s" }}>
-                    <div style={{ fontSize: 10, color: isSel ? "#aaa" : "#bbb", textTransform: "capitalize", fontFamily: "'JetBrains Mono',monospace" }}>{WEEKDAY_NAMES[d.getDay()]}</div>
-                    <div style={{ fontSize: 15, fontWeight: isToday ? 700 : 500, color: isSel ? "#fff" : isToday ? "#1a1a1a" : "#888", marginTop: 1 }}>{formatBR(ds)}</div>
-                    {dayBookings > 0 && <div style={{ fontSize: 10, color: isSel ? "#aaa" : "#16A34A", fontWeight: 600 }}>{dayBookings}</div>}
-                  </div>
-                );
-              })}
-            </div>}
-
-            {/* Room headers */}
-            {viewMode !== "month" && <div style={{ display: "flex", background: "#faf9f6", borderBottom: "1.5px solid #e5e0d6", flexShrink: 0, position: "sticky", top: 0, zIndex: 5 }}>
-              <div style={{ width: 56, flexShrink: 0, borderRight: "1px solid #e5e0d6" }} />
-              {rooms.map(r => (
-                <div key={r.id} style={{ flex: 1, padding: "8px 12px", borderRight: "1px solid #e5e0d6", display: "flex", alignItems: "center", gap: 6, minWidth: viewMode === "week" ? 80 : 140 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>{r.name}</span>
-                </div>
-              ))}
-            </div>}
-
-            {/* Slots */}
-            {viewMode !== "month" && <div style={{ overflowY: "auto" }}>
-              {displayDays.map(day => {
-                const ds = toKey(day);
-                return (
-                  <div key={ds}>
-                    {viewMode === "week" && (
-                      <div style={{ padding: "5px 14px", fontSize: 11, color: "#bbb", background: "#f5f3ef", borderBottom: "1px solid #ede9e0", fontFamily: "'JetBrains Mono',monospace", fontWeight: 500 }}>
-                        {WEEKDAY_NAMES[day.getDay()]} {formatBR(ds)}
-                      </div>
-                    )}
-                    {HOURS.map(hour => (
-                      <div key={hour} style={{ display: "flex", borderBottom: "1px solid #ede9e0" }}>
-                        <div style={{ width: 56, flexShrink: 0, padding: "10px 6px", borderRight: "1px solid #ede9e0", fontSize: 11, color: "#ccc", fontFamily: "'JetBrains Mono',monospace", textAlign: "center", background: "#faf9f6" }}>{hour}</div>
-                        {rooms.map(room => {
-                          const b = getBooking(ds, room.id, hour);
-                          const occ = !b ? getOccupyingBooking(ds, room.id, hour) : null;
-                          const isCont = occ && !occ.isStart;
-                          const statusObj = b ? STATUSES.find(s => s.value === (b.status || "confirmed")) : null;
-
-                          if (isCont) {
-                            return (
-                              <div key={room.id} className="slot-cont"
-                                onClick={() => openBookingModal(ds, room.id, occ.startHour, bookings[bookingKey(ds, room.id, occ.startHour)])}
-                                style={{ flex: 1, minWidth: viewMode === "week" ? 80 : 140, padding: "6px 10px", borderRight: "1px solid #ede9e0", background: `${room.color}0d`, borderLeft: `3px solid ${room.color}44` }}>
-                                <div style={{ width: "60%", height: 2, background: `${room.color}44`, borderRadius: 2, margin: "auto" }} />
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div key={room.id} className="slot" onClick={() => openBookingModal(ds, room.id, hour, b)}
-                              style={{ flex: 1, minWidth: viewMode === "week" ? 80 : 140, padding: "8px 10px", borderRight: "1px solid #ede9e0", background: b ? `${room.color}14` : "#fff", borderLeft: b ? `3px solid ${room.color}` : "3px solid transparent" }}>
-                              {b ? (
-                                <div>
-                                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 4 }}>
-                                    <div style={{ fontSize: 12, fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{b.name}</div>
-                                    {b.duration > 1 && <span style={{ fontSize: 10, background: room.color, color: "#fff", padding: "1px 5px", borderRadius: 3, flexShrink: 0 }}>{b.duration}h</span>}
-                                  </div>
-                                  <div style={{ fontSize: 10, color: room.color, fontWeight: 500 }}>{b.type}</div>
-                                  {statusObj && statusObj.value !== "confirmed" && (
-                                    <div style={{ fontSize: 10, color: statusObj.color, background: statusObj.bg, display: "inline-block", padding: "1px 5px", borderRadius: 3, marginTop: 2 }}>{statusObj.label}</div>
-                                  )}
-                                  {b.phone && <div style={{ fontSize: 10, color: "#aaa", fontFamily: "'JetBrains Mono',monospace" }}>{b.phone}</div>}
-                                </div>
-                              ) : (
-                                <div style={{ fontSize: 11, color: "#ddd", textAlign: "center", lineHeight: "22px" }}>+</div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>}
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════ PROFISSIONAIS ══════════════════════ */}
-      {tab === "profissionais" && (
-        <div style={{ maxWidth: 900, margin: "32px auto", padding: "0 24px" }} className="fade-up">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <div>
-              <h2 style={{ fontSize: 22, fontWeight: 700 }}>Profissionais</h2>
-              <div style={{ fontSize: 13, color: "#aaa" }}>{professionals.length} cadastrado{professionals.length !== 1 ? "s" : ""}</div>
-            </div>
-            <button className="btn" onClick={() => { setForm({ name: "", specialty: SPECIALTIES[0], phone: "", email: "", notes: "" }); setModal({ type: "prof" }); }}
-              style={{ background: "#1a1a1a", color: "#fff", padding: "10px 20px", borderRadius: 10, fontSize: 13, fontWeight: 600 }}>
-              + Novo Profissional
-            </button>
-          </div>
-
-          {/* Search */}
-          <div style={{ marginBottom: 20 }}>
-            <input value={profSearch} onChange={e => setProfSearch(e.target.value)} placeholder="🔍  Buscar por nome ou especialidade..."
-              style={{ width: "100%", border: "1.5px solid #e5e0d6", borderRadius: 10, padding: "10px 14px", fontSize: 13, background: "#fff", color: "#1a1a1a" }} />
-          </div>
-
-          {filteredProfessionals.length === 0 && (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#ccc" }}>
-              <div style={{ fontSize: 40 }}>👤</div>
-              <div style={{ fontSize: 14, marginTop: 8 }}>{profSearch ? "Nenhum resultado encontrado" : "Nenhum profissional cadastrado"}</div>
-            </div>
-          )}
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-            {filteredProfessionals.map(p => (
-              <div key={p.id} className="prof-card" style={{ background: "#fff", borderRadius: 14, padding: 20, border: "1.5px solid #e5e0d6", cursor: "pointer", transition: "all .15s" }}
-                onClick={() => { setForm({ ...p }); setModal({ type: "prof", existing: true }); }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                    {p.specialty === "Psicólogo(a)" || p.specialty === "Terapeuta" ? "🧠" :
-                      p.specialty === "Advogado(a)" || p.specialty === "Consultor(a)" ? "⚖️" :
-                        p.specialty === "Médico(a)" || p.specialty === "Dentista" ? "🩺" : "💼"}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</div>
-                    <div style={{ fontSize: 12, color: "#aaa" }}>{p.specialty}</div>
-                  </div>
-                </div>
-                {p.hourlyRate != null && p.hourlyRate !== "" && (
-                  <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginBottom: 4 }}>💰 R$ {p.hourlyRate}/h (valor próprio)</div>
-                )}
-                {p.phone && <div style={{ fontSize: 12, color: "#888", fontFamily: "'JetBrains Mono',monospace", marginBottom: 4 }}>📱 {p.phone}</div>}
-                {p.email && <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>✉️ {p.email}</div>}
-                {p.notes && <div style={{ fontSize: 11, color: "#bbb", marginTop: 8, borderTop: "1px solid #f0ede6", paddingTop: 8 }}>{p.notes}</div>}
-                {p.phone && (
-                  <button className="btn" onClick={e => { e.stopPropagation(); window.open(`https://wa.me/55${p.phone.replace(/\D/g, "")}`, "_blank"); }}
-                    style={{ marginTop: 12, background: "#dcfce7", color: "#16a34a", padding: "6px 12px", borderRadius: 7, fontSize: 11, fontWeight: 600, width: "100%" }}>
-                    💬 Abrir WhatsApp
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════ RELATÓRIO ══════════════════════ */}
-      {tab === "relatorio" && (
-        <div style={{ maxWidth: 1000, margin: "32px auto", padding: "0 24px" }} className="fade-up">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-            <div>
-              <h2 style={{ fontSize: 22, fontWeight: 700 }}>Relatório de Faturamento</h2>
-              <div style={{ fontSize: 13, color: "#aaa" }}>{MONTH_NAMES[reportMonth]} {reportYear}</div>
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <select value={reportMonth} onChange={e => setReportMonth(+e.target.value)}
-                style={{ background: "#fff", border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#333" }}>
-                {MONTH_NAMES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-              </select>
-              <select value={reportYear} onChange={e => setReportYear(+e.target.value)}
-                style={{ background: "#fff", border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#333" }}>
-                {[2024, 2025, 2026, 2027].map(y => <option key={y}>{y}</option>)}
-              </select>
-              {reportData.rows.length > 0 && (
-                <button className="btn" onClick={() => exportCSV(reportData.rows, reportMonth, reportYear)}
-                  style={{ background: "#f0ede6", color: "#555", padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600 }}>
-                  ⬇ Exportar CSV
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Filtro por profissional */}
-          <div style={{ marginBottom: 20, position: "relative", maxWidth: 360 }}>
-            <input value={reportProfFilter} onChange={e => setReportProfFilter(e.target.value)} list="report-prof-names"
-              placeholder="🔍  Buscar por profissional para ver valor no mês..."
-              style={{ width: "100%", border: "1.5px solid #e5e0d6", borderRadius: 10, padding: "10px 14px", fontSize: 13, background: "#fff", color: "#1a1a1a" }} />
-            <datalist id="report-prof-names">
-              {reportProfNames.map(n => <option key={n} value={n} />)}
-            </datalist>
-            {reportProfFilter && (
-              <div style={{ marginTop: 8, fontSize: 13, color: "#555" }}>
-                Total de <strong>{reportProfFilter}</strong> em {MONTH_NAMES[reportMonth]}: <strong style={{ color: "#16a34a" }}>R$ {reportData.total.toLocaleString("pt-BR")}</strong> ({reportData.rows.length} reserva{reportData.rows.length !== 1 ? "s" : ""})
-              </div>
-            )}
-            {reportProfFilter && reportData.rows.length > 0 && (
-              <button className="btn" onClick={() => repeatProfessionalToNextMonth(reportProfFilter, reportMonth, reportYear)}
-                style={{ marginTop: 10, background: "#1a1a1a", color: "#fff", padding: "9px 16px", borderRadius: 9, fontSize: 12, fontWeight: 600 }}>
-                🔁 Repetir agendamentos para {MONTH_NAMES[(reportMonth + 1) % 12]}
-              </button>
-            )}
-            {reportProfFilter && reportData.rows.length > 0 && (
-              <div style={{ fontSize: 11, color: "#bbb", marginTop: 6 }}>
-                Cria as mesmas reservas no mesmo dia/horário do próximo mês. Conflitos são ignorados — ajuste manualmente na agenda se precisar.
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginBottom: 28 }}>
-            <div style={{ background: "#1a1a1a", color: "#fff", borderRadius: 14, padding: 20 }}>
-              <div style={{ fontSize: 11, color: "#777", textTransform: "uppercase", letterSpacing: 1, fontFamily: "'JetBrains Mono',monospace" }}>Total Mês</div>
-              <div style={{ fontSize: 30, fontWeight: 700, marginTop: 6 }}>R$ {reportData.total.toLocaleString("pt-BR")}</div>
-              <div style={{ fontSize: 12, color: "#555", marginTop: 2 }}>{reportData.rows.length} reservas</div>
-            </div>
-            {rooms.map(r => {
-              const rd = reportData.byRoom[r.id] || {};
-              return (
-                <div key={r.id} style={{ background: "#fff", border: "1.5px solid #e5e0d6", borderRadius: 14, padding: 20, borderTop: `4px solid ${r.color}` }}>
-                  <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: 1, fontFamily: "'JetBrains Mono',monospace" }}>{r.name}</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, marginTop: 6 }}>R$ {(rd.revenue || 0).toLocaleString("pt-BR")}</div>
-                  <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>{rd.count || 0} reservas</div>
-                </div>
-              );
-            })}
-          </div>
-
-          {reportData.rows.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#ccc" }}>
-              <div style={{ fontSize: 40 }}>📊</div>
-              <div style={{ fontSize: 14, marginTop: 8 }}>Nenhuma reserva neste período</div>
-            </div>
-          ) : (
-            <div style={{ background: "#fff", borderRadius: 14, border: "1.5px solid #e5e0d6", overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#faf9f6" }}>
-                    {["Data", "Horário", "Dur.", "Sala", "Profissional", "Especialidade", "Status", "Valor"].map(h => (
-                      <th key={h} style={{ padding: "11px 14px", textAlign: "left", fontSize: 11, color: "#aaa", fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, borderBottom: "1.5px solid #e5e0d6", fontFamily: "'JetBrains Mono',monospace" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.rows.map((r, i) => {
-                    const statusObj = STATUSES.find(s => s.value === r.status) || STATUSES[0];
-                    return (
-                      <tr key={i}>
-                        <td style={{ padding: "10px 14px", fontSize: 13, borderBottom: "1px solid #f0ede6", fontFamily: "'JetBrains Mono',monospace", color: "#555" }}>{formatBR(r.day)}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 13, borderBottom: "1px solid #f0ede6", fontFamily: "'JetBrains Mono',monospace" }}>{r.hour}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 13, borderBottom: "1px solid #f0ede6", color: "#888", fontFamily: "'JetBrains Mono',monospace" }}>{r.duration}h</td>
-                        <td style={{ padding: "10px 14px", fontSize: 13, borderBottom: "1px solid #f0ede6" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: 2, background: r.color, display: "inline-block", flexShrink: 0 }} />
-                            {r.room}
-                          </span>
-                        </td>
-                        <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 500, borderBottom: "1px solid #f0ede6" }}>{r.name}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 12, color: "#888", borderBottom: "1px solid #f0ede6" }}>{r.type}</td>
-                        <td style={{ padding: "10px 14px", borderBottom: "1px solid #f0ede6" }}>
-                          <span style={{ fontSize: 11, color: statusObj.color, background: statusObj.bg, padding: "2px 8px", borderRadius: 5, fontWeight: 600 }}>{statusObj.label}</span>
-                        </td>
-                        <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 600, color: "#16a34a", borderBottom: "1px solid #f0ede6" }}>R$ {r.price}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ background: "#faf9f6" }}>
-                    <td colSpan={7} style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, textAlign: "right", borderTop: "1.5px solid #e5e0d6" }}>Total:</td>
-                    <td style={{ padding: "12px 14px", fontSize: 15, fontWeight: 700, color: "#16a34a", borderTop: "1.5px solid #e5e0d6" }}>R$ {reportData.total.toLocaleString("pt-BR")}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══════════════════════ FINANCEIRO ══════════════════════ */}
-      {tab === "financeiro" && (
-        <FinanceiroTab financeiro={financeiro} setFinanceiro={setFinanceiro} />
-      )}
-
-      {/* ══════════════════════ CONFIGURAÇÕES ══════════════════════ */}
-      {tab === "configuracoes" && (
-        <div style={{ maxWidth: 800, margin: "32px auto", padding: "0 24px" }} className="fade-up">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-            <div>
-              <h2 style={{ fontSize: 22, fontWeight: 700 }}>Configuração de Salas</h2>
-              <div style={{ fontSize: 13, color: "#aaa" }}>Gerencie salas e preços por hora</div>
-            </div>
-            <button className="btn" onClick={() => { setForm({ name: "", color: "#16A34A" }); setModal({ type: "room" }); }}
-              style={{ background: "#1a1a1a", color: "#fff", padding: "10px 20px", borderRadius: 10, fontSize: 13, fontWeight: 600 }}>
-              + Nova Sala
-            </button>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px,1fr))", gap: 16 }}>
-            {rooms.map(r => (
-              <div key={r.id} style={{ background: "#fff", border: "1.5px solid #e5e0d6", borderRadius: 14, padding: 20, borderTop: `5px solid ${r.color}` }}>
-                <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{r.name}</div>
-                <div style={{ fontSize: 12, color: "#aaa", marginBottom: 14 }}>Cor: <span style={{ background: r.color, padding: "1px 8px", borderRadius: 4, color: "#fff", fontSize: 11 }}>{r.color}</span></div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                  <span style={{ fontSize: 13, color: "#555" }}>R$/hora:</span>
-                  <input type="number" value={prices[r.id] || 0} onChange={e => setPrices(p => ({ ...p, [r.id]: +e.target.value }))}
-                    style={{ width: 80, border: "1.5px solid #e5e0d6", borderRadius: 7, padding: "5px 8px", fontSize: 14, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }} />
-                </div>
-                <button className="btn" onClick={() => { setForm({ ...r }); setModal({ type: "room", existing: true }); }}
-                  style={{ width: "100%", background: "#f5f3ee", padding: "8px", borderRadius: 8, fontSize: 12, fontWeight: 500 }}>
-                  ✏️ Editar nome/cor
-                </button>
-              </div>
-            ))}
-          </div>
-          {/* Alterar senha */}
-          <ChangePasswordSection />
-        </div>
-      )}
-
-      {/* ══════════════════════ MODAL RESERVA ══════════════════════ */}
-      {modal?.type === "booking" && (
-        <ModalOverlay onClose={() => setModal(null)}>
-          <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <div style={{ fontSize: 17, fontWeight: 700 }}>{modal.existing ? "Editar Reserva" : "Nova Reserva"}</div>
-              <div style={{ fontSize: 12, color: "#aaa", fontFamily: "'JetBrains Mono',monospace", marginTop: 3 }}>
-                {rooms.find(r => r.id === form.roomId)?.name} · {form.hour} · {formatBR(form.day)}
-              </div>
-            </div>
-            <button className="btn" onClick={() => setModal(null)} style={{ fontSize: 22, color: "#ccc", background: "transparent" }}>×</button>
-          </div>
-
-          {professionals.length > 0 && (
-            <div style={{ marginBottom: 14 }}>
-              <Label>Profissional cadastrado</Label>
-              <select onChange={e => {
-                const p = professionals.find(x => x.id === +e.target.value);
-                if (p) setForm(f => ({ ...f, name: p.name, type: p.specialty, phone: p.phone || "", profId: p.id }));
-              }} style={inputStyle}>
-                <option value="">— Selecionar —</option>
-                {professionals.map(p => <option key={p.id} value={p.id}>{p.name} ({p.specialty})</option>)}
-              </select>
-            </div>
-          )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div><Label>Nome *</Label><input value={form.name || ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nome do profissional" style={inputStyle} /></div>
-            <div><Label>Especialidade</Label>
-              <select value={form.type || SPECIALTIES[0]} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={inputStyle}>
-                {SPECIALTIES.map(s => <option key={s}>{s}</option>)}
-              </select>
-            </div>
-
-            {/* Duration selector */}
-            <div>
-              <Label>Duração</Label>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {DURATIONS.map(d => (
-                  <button key={d} className="btn" onClick={() => setForm(f => ({ ...f, duration: d }))}
-                    style={{ minWidth: 42, flex: "1 0 auto", padding: "8px 0", borderRadius: 8, fontSize: 13, fontWeight: 600, background: (form.duration ?? 1) === d ? "#1a1a1a" : "#f0ede6", color: (form.duration ?? 1) === d ? "#fff" : "#555" }}>
-                    {d}h
-                  </button>
-                ))}
-              </div>
-              {(form.duration ?? 1) > 1 && (
-                <div style={{ fontSize: 11, color: "#aaa", marginTop: 5, fontFamily: "'JetBrains Mono',monospace" }}>
-                  Valor total: R$ {(hourlyRateFor(form.roomId, form.profId, form.name) * (form.duration ?? 1)).toLocaleString("pt-BR")}
-                </div>
-              )}
-            </div>
-
-            {/* Status selector */}
-            <div>
-              <Label>Status</Label>
-              <div style={{ display: "flex", gap: 6 }}>
-                {STATUSES.map(s => (
-                  <button key={s.value} className="btn" onClick={() => setForm(f => ({ ...f, status: s.value }))}
-                    style={{ flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 11, fontWeight: 600, background: (form.status || "confirmed") === s.value ? s.color : s.bg, color: (form.status || "confirmed") === s.value ? "#fff" : s.color }}>
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div><Label>Telefone / WhatsApp</Label><input value={form.phone || ""} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(11) 99999-9999" style={inputStyle} /></div>
-            <div><Label>Observações</Label><textarea value={form.notes || ""} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder="Anotações opcionais..." style={{ ...inputStyle, resize: "none" }} /></div>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, marginTop: 20, flexWrap: "wrap" }}>
-            {modal.existing && (
-              <>
-                <button className="btn" onClick={() => setConfirmDel({ type: "booking", day: form.day, roomId: form.roomId, hour: form.hour })}
-                  style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", fontSize: 12, fontWeight: 600, border: "1.5px solid #fecaca" }}>
-                  🗑 Cancelar reserva
-                </button>
-                {form.phone && (
-                  <button className="btn" onClick={() => {
-                    const room = rooms.find(r => r.id === form.roomId);
-                    openWhatsApp(form.phone, form.name, room?.name, formatBR(form.day), form.hour);
-                  }} style={{ padding: "9px 14px", borderRadius: 8, background: "#dcfce7", color: "#16a34a", fontSize: 12, fontWeight: 600, border: "1.5px solid #bbf7d0" }}>
-                    💬 Confirmar via WhatsApp
-                  </button>
-                )}
-              </>
-            )}
-            <button className="btn" onClick={saveBooking} disabled={!form.name?.trim()}
-              style={{ marginLeft: "auto", padding: "10px 20px", borderRadius: 9, background: form.name?.trim() ? "#1a1a1a" : "#eee", color: form.name?.trim() ? "#fff" : "#aaa", fontSize: 13, fontWeight: 600 }}>
-              {modal.existing ? "Salvar" : "Confirmar reserva"}
-            </button>
-          </div>
-        </ModalOverlay>
-      )}
-
-      {/* ══════════════════════ MODAL PROFISSIONAL ══════════════════════ */}
-      {modal?.type === "prof" && (
-        <ModalOverlay onClose={() => setModal(null)}>
-          <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between" }}>
-            <div style={{ fontSize: 17, fontWeight: 700 }}>{modal.existing ? "Editar Profissional" : "Novo Profissional"}</div>
-            <button className="btn" onClick={() => setModal(null)} style={{ fontSize: 22, color: "#ccc", background: "transparent" }}>×</button>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div><Label>Nome *</Label><input value={form.name || ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nome completo" style={inputStyle} /></div>
-            <div><Label>Especialidade</Label>
-              <select value={form.specialty || SPECIALTIES[0]} onChange={e => setForm(f => ({ ...f, specialty: e.target.value }))} style={inputStyle}>
-                {SPECIALTIES.map(s => <option key={s}>{s}</option>)}
-              </select>
-            </div>
-            <div><Label>Telefone / WhatsApp</Label><input value={form.phone || ""} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(11) 99999-9999" style={inputStyle} /></div>
-            <div><Label>E-mail</Label><input value={form.email || ""} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="email@exemplo.com" style={inputStyle} /></div>
-            <div><Label>Valor por hora (R$) — opcional</Label>
-              <input type="number" value={form.hourlyRate ?? ""} onChange={e => setForm(f => ({ ...f, hourlyRate: e.target.value === "" ? null : +e.target.value }))}
-                placeholder="Deixe em branco para usar o valor da sala" style={inputStyle} />
-              <div style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>Se definido, este valor substitui o preço padrão da sala para este profissional.</div>
-            </div>
-            <div><Label>Observações</Label><textarea value={form.notes || ""} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ ...inputStyle, resize: "none" }} /></div>
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-            {modal.existing && (
-              <button className="btn" onClick={() => setConfirmDel({ type: "prof", id: form.id })}
-                style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", fontSize: 12, fontWeight: 600, border: "1.5px solid #fecaca" }}>
-                🗑 Remover
-              </button>
-            )}
-            <button className="btn" onClick={saveProfessional} disabled={!form.name?.trim()}
-              style={{ marginLeft: "auto", padding: "10px 20px", borderRadius: 9, background: form.name?.trim() ? "#1a1a1a" : "#eee", color: form.name?.trim() ? "#fff" : "#aaa", fontSize: 13, fontWeight: 600 }}>
-              Salvar
-            </button>
-          </div>
-        </ModalOverlay>
-      )}
-
-      {/* ══════════════════════ MODAL SALA ══════════════════════ */}
-      {modal?.type === "room" && (
-        <ModalOverlay onClose={() => setModal(null)}>
-          <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between" }}>
-            <div style={{ fontSize: 17, fontWeight: 700 }}>{modal.existing ? "Editar Sala" : "Nova Sala"}</div>
-            <button className="btn" onClick={() => setModal(null)} style={{ fontSize: 22, color: "#ccc", background: "transparent" }}>×</button>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div><Label>Nome da sala *</Label><input value={form.name || ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Sala 05" style={inputStyle} /></div>
-            <div>
-              <Label>Cor de identificação</Label>
-              <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 4 }}>
-                <input type="color" value={form.color || "#16A34A"} onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                  style={{ width: 48, height: 36, border: "1.5px solid #e5e0d6", borderRadius: 8, cursor: "pointer", padding: 2 }} />
-                <span style={{ fontSize: 12, color: "#aaa", fontFamily: "'JetBrains Mono',monospace" }}>{form.color}</span>
-                <div style={{ width: 24, height: 24, borderRadius: 6, background: form.color || "#16A34A" }} />
-              </div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-            {modal.existing && (
-              <button className="btn" onClick={() => { setRooms(r => r.filter(x => x.id !== form.id)); setModal(null); showToast("Sala removida.", "err"); }}
-                style={{ padding: "9px 14px", borderRadius: 8, background: "#fff0f0", color: "#dc2626", fontSize: 12, fontWeight: 600, border: "1.5px solid #fecaca" }}>
-                🗑 Remover
-              </button>
-            )}
-            <button className="btn" onClick={saveRoom} disabled={!form.name?.trim()}
-              style={{ marginLeft: "auto", padding: "10px 20px", borderRadius: 9, background: form.name?.trim() ? "#1a1a1a" : "#eee", color: form.name?.trim() ? "#fff" : "#aaa", fontSize: 13, fontWeight: 600 }}>
-              Salvar
-            </button>
-          </div>
-        </ModalOverlay>
-      )}
-
-      {/* Confirm delete */}
-      {confirmDel && (
-        <ModalOverlay onClose={() => setConfirmDel(null)} small>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Confirmar exclusão?</div>
-            <div style={{ fontSize: 13, color: "#aaa", marginBottom: 20 }}>Esta ação não pode ser desfeita.</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button className="btn" onClick={() => setConfirmDel(null)} style={{ flex: 1, padding: 10, borderRadius: 8, background: "#f5f3ee", fontSize: 13 }}>Cancelar</button>
-              <button className="btn" onClick={() => {
-                if (confirmDel.type === "booking") deleteBooking(confirmDel.day, confirmDel.roomId, confirmDel.hour);
-                else if (confirmDel.type === "prof") deleteProfessional(confirmDel.id);
-              }} style={{ flex: 1, padding: 10, borderRadius: 8, background: "#dc2626", color: "#fff", fontSize: 13, fontWeight: 600 }}>Confirmar</button>
-            </div>
-          </div>
-        </ModalOverlay>
-      )}
-
-      {/* Toast */}
       {toast && (
         <div className="toast-anim" style={{
           position: "fixed", bottom: 24, right: 24,
@@ -1355,20 +1327,3 @@ function AppInner({ onLogout }) {
     </div>
   );
 }
-
-function ModalOverlay({ children, onClose, small }) {
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 16 }}>
-      <div className="fade-up" onClick={e => e.stopPropagation()}
-        style={{ background: "#fff", borderRadius: 18, padding: 28, width: small ? 320 : 440, maxWidth: "100%", boxShadow: "0 20px 60px rgba(0,0,0,.18)", border: "1.5px solid #e5e0d6" }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Label({ children }) {
-  return <label style={{ fontSize: 11, color: "#aaa", display: "block", marginBottom: 5, textTransform: "uppercase", letterSpacing: .9, fontFamily: "'JetBrains Mono',monospace" }}>{children}</label>;
-}
-
-const inputStyle = { width: "100%", border: "1.5px solid #e5e0d6", borderRadius: 8, padding: "9px 12px", fontSize: 13, color: "#1a1a1a", background: "#faf9f6", display: "block" };
