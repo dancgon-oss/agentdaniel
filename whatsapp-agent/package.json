@@ -1,0 +1,21 @@
+{
+  "name": "agent-daniel-whatsapp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@hapi/boom": "^10.0.1",
+    "@supabase/supabase-js": "^2.45.4",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "openai": "^4.67.3",
+    "pino": "^9.4.0",
+    "qrcode": "^1.5.4"
+  }
+}
