@@ -17,6 +17,17 @@ const DEFAULT_ROOMS = [
 const HOURS = Array.from({ length: 14 }, (_, i) => `${String(i + 7).padStart(2, "0")}:00`);
 const DURATIONS = Array.from({ length: HOURS.length - 1 }, (_, i) => i + 1);
 const SPECIALTIES = ["Psicólogo(a)", "Terapeuta", "Advogado(a)", "Consultor(a)", "Médico(a)", "Dentista", "Coach", "Nutricionista", "Fisioterapeuta", "Outro"];
+const REGISTRO_TIPOS = ["CRP","CRM","OAB","CRN","CREFITO","CRO","CFP","CREA","CRC","Outro"];
+function registroTipoFor(specialty) {
+  if (!specialty) return "CRP";
+  if (specialty.includes("Psicólogo")) return "CRP";
+  if (specialty.includes("Médico")) return "CRM";
+  if (specialty.includes("Advogado")) return "OAB";
+  if (specialty.includes("Nutricionista")) return "CRN";
+  if (specialty.includes("Fisioterapeuta")) return "CREFITO";
+  if (specialty.includes("Dentista")) return "CRO";
+  return "CRP";
+}
 const STATUSES = [
   { value: "confirmed", label: "Confirmado", color: "#16a34a", bg: "#dcfce7" },
   { value: "pending",   label: "Pendente",   color: "#d97706", bg: "#fef3c7" },
@@ -162,6 +173,24 @@ function AppInner({ onLogout }) {
 
   function saveBooking() {
     if (!form.name?.trim()) return;
+    // Multi-slot mode: form.selectedHours is set when user picks individual slots
+    if (form.selectedHours && form.selectedHours.length > 0) {
+      let conflicts = [];
+      form.selectedHours.forEach(h => {
+        const occ = getOccupyingBooking(form.day, form.roomId, h);
+        if (occ && !occ.isStart) conflicts.push(h);
+      });
+      if (conflicts.length) { showToast(`Conflito em: ${conflicts.join(", ")}!`,"err"); return; }
+      const entry = { name:form.name.trim(), type:form.type||SPECIALTIES[0], phone:form.phone||"", profId:form.profId||null, notes:form.notes||"", duration:1, status:form.status||"confirmed" };
+      setBookings(b => {
+        const n = {...b};
+        form.selectedHours.forEach(h => { n[bookingKey(form.day,form.roomId,h)] = {...entry}; });
+        return n;
+      });
+      setModal(null); showToast(`${form.selectedHours.length} horário${form.selectedHours.length>1?"s":""} reservado${form.selectedHours.length>1?"s":""}!`);
+      return;
+    }
+    // Single-slot / consecutive mode
     const dur = form.duration??1;
     const startIdx = hourToIndex(form.hour);
     for (let i=startIdx;i<startIdx+dur;i++) {
@@ -259,7 +288,7 @@ function AppInner({ onLogout }) {
 
   function openBookingModal(day, roomId, hour, existing) {
     if (!existing) { const occ=getOccupyingBooking(day,roomId,hour); if (occ&&!occ.isStart) { openBookingModal(day,roomId,occ.startHour,bookings[bookingKey(day,roomId,occ.startHour)]); return; } }
-    setForm(existing?{...existing,day,roomId,hour}:{day,roomId,hour,name:"",type:SPECIALTIES[0],phone:"",profId:null,notes:"",duration:1,status:"confirmed"});
+    setForm(existing?{...existing,day,roomId,hour,selectedHours:null}:{day,roomId,hour,name:"",type:SPECIALTIES[0],phone:"",profId:null,notes:"",duration:1,status:"confirmed",selectedHours:[hour]});
     setModal({type:"booking",existing:!!existing});
   }
 
@@ -440,7 +469,7 @@ function AppInner({ onLogout }) {
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                     {[
                       { icon:"📅", label:"Nova Reserva", fn:()=>{ setTab("agenda"); openBookingModal(todayKey,rooms[0]?.id,HOURS[0],null); }},
-                      { icon:"👤", label:"Novo Profissional", fn:()=>{ setTab("profissionais"); setForm({name:"",specialty:SPECIALTIES[0],phone:"",email:"",notes:""}); setModal({type:"prof"}); }},
+                      { icon:"👤", label:"Novo Profissional", fn:()=>{ setTab("profissionais"); setForm({name:"",specialty:SPECIALTIES[0],phone:"",email:"",notes:"",registroTipo:"CRP",registroCodigo:""}); setModal({type:"prof"}); }},
                       { icon:"📋", label:"Ver Relatório", fn:()=>setTab("relatorio") },
                       { icon:"💰", label:"Financeiro", fn:()=>setTab("financeiro") },
                     ].map(a=>(
@@ -642,7 +671,7 @@ function AppInner({ onLogout }) {
                 <h2 style={{ fontSize:24, fontWeight:800, color:"#0f172a" }}>Profissionais</h2>
                 <div style={{ fontSize:14, color:"#64748b", marginTop:2 }}>{professionals.length} cadastrado{professionals.length!==1?"s":""}</div>
               </div>
-              <button className="btn" onClick={()=>{ setForm({name:"",specialty:SPECIALTIES[0],phone:"",email:"",notes:""}); setModal({type:"prof"}); }}
+              <button className="btn" onClick={()=>{ setForm({name:"",specialty:SPECIALTIES[0],phone:"",email:"",notes:"",registroTipo:"CRP",registroCodigo:""}); setModal({type:"prof"}); }}
                 style={{ background:"linear-gradient(135deg,#1e3a5f,#2563eb)", color:"#fff", padding:"11px 22px", borderRadius:12, fontSize:13, fontWeight:700, boxShadow:"0 4px 12px rgba(37,99,235,.3)" }}>
                 + Novo Profissional
               </button>
@@ -832,7 +861,46 @@ function AppInner({ onLogout }) {
                 {SPECIALTIES.map(s=><option key={s}>{s}</option>)}
               </select>
             </div>
-            <div>
+
+            {/* ── Seletor de horários ── */}
+            {!modal?.existing && (() => {
+              const sel = form.selectedHours || [];
+              const rate = hourlyRateFor(form.roomId, form.profId, form.name);
+              return (
+                <div>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                    <FormLabel>Horários do dia {formatBR(form.day)}</FormLabel>
+                    <span style={{ fontSize:11, color:"#2563eb", fontWeight:700 }}>{sel.length} selecionado{sel.length!==1?"s":""} · R$ {(rate*sel.length).toLocaleString("pt-BR")}</span>
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:5 }}>
+                    {HOURS.map(h => {
+                      const occ = getOccupyingBooking(form.day, form.roomId, h);
+                      const busy = occ && !(occ.isStart && sel.includes(h) && !modal?.existing);
+                      const checked = sel.includes(h);
+                      return (
+                        <button key={h} className="btn" disabled={busy&&!checked} onClick={()=>{
+                          if (busy) return;
+                          setForm(f => {
+                            const s = f.selectedHours||[];
+                            return {...f, selectedHours: s.includes(h)?s.filter(x=>x!==h):[...s,h]};
+                          });
+                        }} style={{ padding:"7px 0", borderRadius:8, fontSize:12, fontWeight:700,
+                          background: busy ? "#f1f5f9" : checked ? "#2563eb" : "#f8fafc",
+                          color: busy ? "#cbd5e1" : checked ? "#fff" : "#334155",
+                          border: checked ? "none" : "1px solid #e2e8f0",
+                          cursor: busy ? "default" : "pointer",
+                          textDecoration: busy ? "line-through" : "none",
+                        }}>{h}</button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ fontSize:11, color:"#94a3b8", marginTop:6 }}>Clique para selecionar. Horários riscados já estão ocupados.</div>
+                </div>
+              );
+            })()}
+
+            {/* Duração — só para edição de reserva existente */}
+            {modal?.existing && <div>
               <FormLabel>Duração</FormLabel>
               <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
                 {DURATIONS.map(d=>(
@@ -843,7 +911,7 @@ function AppInner({ onLogout }) {
                 ))}
               </div>
               {(form.duration??1)>1 && <div style={{ fontSize:12, color:"#16a34a", marginTop:5, fontWeight:600 }}>Total: R$ {(hourlyRateFor(form.roomId,form.profId,form.name)*(form.duration??1)).toLocaleString("pt-BR")}</div>}
-            </div>
+            </div>}
             <div>
               <FormLabel>Status</FormLabel>
               <div style={{ display:"flex", gap:6 }}>
@@ -873,10 +941,15 @@ function AppInner({ onLogout }) {
                 )}
               </>
             )}
-            <button className="btn" onClick={saveBooking} disabled={!form.name?.trim()}
-              style={{ marginLeft:"auto", padding:"11px 22px", borderRadius:10, background:form.name?.trim()?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#f1f5f9", color:form.name?.trim()?"#fff":"#94a3b8", fontSize:14, fontWeight:700, boxShadow:form.name?.trim()?"0 4px 12px rgba(37,99,235,.3)":"none" }}>
-              {modal.existing?"Salvar":"Confirmar reserva"}
-            </button>
+            {(() => {
+              const canSave = form.name?.trim() && (modal?.existing || (form.selectedHours && form.selectedHours.length > 0));
+              return (
+                <button className="btn" onClick={saveBooking} disabled={!canSave}
+                  style={{ marginLeft:"auto", padding:"11px 22px", borderRadius:10, background:canSave?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#f1f5f9", color:canSave?"#fff":"#94a3b8", fontSize:14, fontWeight:700, boxShadow:canSave?"0 4px 12px rgba(37,99,235,.3)":"none" }}>
+                  {modal?.existing?"Salvar":`Confirmar ${(form.selectedHours||[]).length} horário${(form.selectedHours||[]).length!==1?"s":""}`}
+                </button>
+              );
+            })()}
           </div>
         </ModalOverlay>
       )}
@@ -891,9 +964,20 @@ function AppInner({ onLogout }) {
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <div><FormLabel>Nome *</FormLabel><input value={form.name||""} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nome completo" style={fmInput} /></div>
             <div><FormLabel>Especialidade</FormLabel>
-              <select value={form.specialty||SPECIALTIES[0]} onChange={e=>setForm(f=>({...f,specialty:e.target.value}))} style={fmInput}>
+              <select value={form.specialty||SPECIALTIES[0]} onChange={e=>setForm(f=>({...f,specialty:e.target.value,registroTipo:registroTipoFor(e.target.value)}))} style={fmInput}>
                 {SPECIALTIES.map(s=><option key={s}>{s}</option>)}
               </select>
+            </div>
+            <div>
+              <FormLabel>Registro profissional</FormLabel>
+              <div style={{ display:"flex", gap:8 }}>
+                <select value={form.registroTipo||registroTipoFor(form.specialty)} onChange={e=>setForm(f=>({...f,registroTipo:e.target.value}))}
+                  style={{ ...fmInput, width:110, flexShrink:0 }}>
+                  {REGISTRO_TIPOS.map(r=><option key={r}>{r}</option>)}
+                </select>
+                <input value={form.registroCodigo||""} onChange={e=>setForm(f=>({...f,registroCodigo:e.target.value}))}
+                  placeholder="Nº do registro (ex: 123456/SP)" style={{ ...fmInput, flex:1 }} />
+              </div>
             </div>
             <div><FormLabel>Telefone / WhatsApp</FormLabel><input value={form.phone||""} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="(11) 99999-9999" style={fmInput} /></div>
             <div><FormLabel>E-mail</FormLabel><input value={form.email||""} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="email@exemplo.com" style={fmInput} /></div>
@@ -1000,6 +1084,7 @@ function ProfCard({ p, bookings, rooms, prices, professionals, onEdit, onRepeat 
             <div style={{ fontSize:12, color:"#64748b" }}>{p.specialty}</div>
           </div>
         </div>
+        {p.registroCodigo&&<div style={{ fontSize:12, color:"#2563eb", fontWeight:700, marginBottom:5, fontFamily:"'JetBrains Mono',monospace" }}>🪪 {p.registroTipo||"CRP"} {p.registroCodigo}</div>}
         {p.hourlyRate!=null&&p.hourlyRate!==""&&<div style={{ fontSize:12, color:"#16a34a", fontWeight:700, marginBottom:5 }}>💰 R$ {p.hourlyRate}/h (valor próprio)</div>}
         {p.phone&&<div style={{ fontSize:12, color:"#64748b", fontFamily:"'JetBrains Mono',monospace", marginBottom:4 }}>📱 {p.phone}</div>}
         {p.email&&<div style={{ fontSize:12, color:"#64748b", marginBottom:4 }}>✉️ {p.email}</div>}
