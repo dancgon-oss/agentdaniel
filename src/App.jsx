@@ -1,10 +1,39 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const STORAGE_KEYS = {
   bookings: "salas_bookings", professionals: "salas_professionals",
   rooms: "salas_rooms", prices: "salas_prices",
   credentials: "salas_credentials", financeiro: "salas_financeiro",
+  config: "salas_config",
 };
+
+// ─── PIX helpers ──────────────────────────────────────────────────────────────
+function pixCRC16(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) { crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1; }
+  }
+  return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, "0");
+}
+function emvField(id, value) { const len = String(value.length).padStart(2,"0"); return `${id}${len}${value}`; }
+function generatePix({ key, name, city, amount, txid="***" }) {
+  if (!key || !name || !city || !amount) return "";
+  const merchantAcct = emvField("00","BR.GOV.BCB.PIX") + emvField("01", key);
+  const addData = emvField("05", txid.substring(0,25));
+  const payload =
+    emvField("00","01") +
+    emvField("26", merchantAcct) +
+    emvField("52","0000") +
+    emvField("53","986") +
+    emvField("54", amount.toFixed(2)) +
+    emvField("58","BR") +
+    emvField("59", name.substring(0,25)) +
+    emvField("60", city.substring(0,15)) +
+    emvField("62", addData) +
+    "6304";
+  return payload + pixCRC16(payload);
+}
 function load(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
 }
@@ -129,6 +158,7 @@ function AppInner({ onLogout }) {
   const [professionals, setProfessionals] = useState(() => load(STORAGE_KEYS.professionals, []));
   const [prices, setPrices] = useState(() => load(STORAGE_KEYS.prices, { 1:80, 2:80 }));
   const [financeiro, setFinanceiro] = useState(() => load(STORAGE_KEYS.financeiro, []));
+  const [config, setConfig] = useState(() => load(STORAGE_KEYS.config, { pixKey:"", pixName:"", pixCity:"", pixTipo:"Chave aleatória" }));
   const [tab, setTab] = useState("dashboard");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(toKey(new Date()));
@@ -149,6 +179,7 @@ function AppInner({ onLogout }) {
   useEffect(() => { save(STORAGE_KEYS.professionals, professionals); }, [professionals]);
   useEffect(() => { save(STORAGE_KEYS.rooms, rooms); }, [rooms]);
   useEffect(() => { save(STORAGE_KEYS.prices, prices); }, [prices]);
+  useEffect(() => { save(STORAGE_KEYS.config, config); }, [config]);
 
   const showToast = useCallback((msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); }, []);
 
@@ -305,7 +336,7 @@ function AppInner({ onLogout }) {
 
   const NAV = [
     ["dashboard","📊","Dashboard"],["agenda","📅","Agenda"],["profissionais","👤","Profissionais"],
-    ["relatorio","📋","Relatório"],["financeiro","💰","Financeiro"],["configuracoes","⚙️","Configurações"],
+    ["relatorio","📋","Relatório"],["cobranca","💳","Cobrança"],["financeiro","💰","Financeiro"],["configuracoes","⚙️","Configurações"],
   ];
 
   return (
@@ -795,6 +826,9 @@ function AppInner({ onLogout }) {
           </div>
         )}
 
+        {/* ══ COBRANÇA ══ */}
+        {tab==="cobranca" && <CobrancaTab bookings={bookings} professionals={professionals} rooms={rooms} prices={prices} hourlyRateFor={hourlyRateFor} config={config} />}
+
         {/* ══ FINANCEIRO ══ */}
         {tab==="financeiro" && <FinanceiroTab financeiro={financeiro} setFinanceiro={setFinanceiro} />}
 
@@ -828,7 +862,44 @@ function AppInner({ onLogout }) {
                 </div>
               ))}
             </div>
-            <ChangePasswordSection />
+            {/* PIX Config */}
+          <div style={{ background:"#fff", borderRadius:16, border:"1px solid #e2e8f0", padding:24, maxWidth:480, boxShadow:"0 1px 4px rgba(0,0,0,.04)", marginBottom:24 }}>
+            <div style={{ fontSize:15, fontWeight:700, color:"#0f172a", marginBottom:4 }}>💳 Configuração PIX</div>
+            <div style={{ fontSize:12, color:"#94a3b8", marginBottom:16 }}>Dados usados para gerar cobranças automáticas</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Tipo de chave</div>
+                <select value={config.pixTipo||"Chave aleatória"} onChange={e=>setConfig(c=>({...c,pixTipo:e.target.value}))}
+                  style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#f8fafc" }}>
+                  {["CPF","CNPJ","E-mail","Telefone","Chave aleatória"].map(t=><option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Chave PIX</div>
+                <input value={config.pixKey||""} onChange={e=>setConfig(c=>({...c,pixKey:e.target.value}))} placeholder="Sua chave PIX"
+                  style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#f8fafc" }} />
+              </div>
+              <div style={{ display:"flex", gap:10 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Nome beneficiário</div>
+                  <input value={config.pixName||""} onChange={e=>setConfig(c=>({...c,pixName:e.target.value}))} placeholder="Ex: Maria Silva"
+                    style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#f8fafc" }} />
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Cidade</div>
+                  <input value={config.pixCity||""} onChange={e=>setConfig(c=>({...c,pixCity:e.target.value}))} placeholder="Ex: SAO PAULO"
+                    style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#f8fafc" }} />
+                </div>
+              </div>
+              {config.pixKey && config.pixName && config.pixCity && (
+                <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:9, padding:"10px 14px", fontSize:12, color:"#16a34a", fontWeight:600 }}>
+                  ✅ PIX configurado — cobranças automáticas ativadas
+                </div>
+              )}
+            </div>
+          </div>
+
+          <ChangePasswordSection />
           </div>
         )}
       </div>
@@ -1149,6 +1220,203 @@ function ProfCard({ p, bookings, rooms, prices, professionals, onEdit, onRepeat 
   );
 }
 
+// ─── PIX QR Code component ───────────────────────────────────────────────────
+function PixQRCode({ pixString }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current || !pixString) return;
+    function render() {
+      if (!window.QRCode) return;
+      ref.current.innerHTML = "";
+      new window.QRCode(ref.current, { text: pixString, width: 180, height: 180, colorDark:"#0f172a", colorLight:"#ffffff" });
+    }
+    if (window.QRCode) { render(); return; }
+    if (!document.querySelector('script[data-qr]')) {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+      s.setAttribute("data-qr","1");
+      s.onload = render;
+      document.head.appendChild(s);
+    } else {
+      const wait = setInterval(()=>{ if (window.QRCode) { clearInterval(wait); render(); } },100);
+    }
+  }, [pixString]);
+  return <div ref={ref} style={{ display:"flex", justifyContent:"center" }} />;
+}
+
+// ─── Cobrança Mensal ──────────────────────────────────────────────────────────
+function CobrancaTab({ bookings, professionals, rooms, prices, hourlyRateFor, config }) {
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
+  const [expanded, setExpanded] = useState(null); // profName
+
+  // Build per-professional summary for the selected month
+  const profSummaries = (() => {
+    const map = {};
+    Object.entries(bookings).forEach(([key, b]) => {
+      const [day, roomId] = key.split("_");
+      const dt = new Date(day + "T12:00:00");
+      if (dt.getMonth() !== month || dt.getFullYear() !== year) return;
+      const name = b.name || "?";
+      if (!map[name]) {
+        const prof = professionals.find(p => p.name.trim().toLowerCase() === name.trim().toLowerCase());
+        map[name] = { name, prof, slots: 0, hours: 0, total: 0, phone: b.phone || prof?.phone || "" };
+      }
+      const dur = b.duration ?? 1;
+      const rate = hourlyRateFor(parseInt(roomId), b.profId, name);
+      map[name].slots++;
+      map[name].hours += dur;
+      map[name].total += rate * dur;
+    });
+    return Object.values(map).sort((a,b) => b.total - a.total);
+  })();
+
+  const totalGeral = profSummaries.reduce((s, p) => s + p.total, 0);
+  const pixOk = config.pixKey && config.pixName && config.pixCity;
+
+  function waMessage(p) {
+    const pix = pixOk ? generatePix({ key: config.pixKey, name: config.pixName, city: config.pixCity, amount: p.total, txid: p.name.replace(/\s/g,"").substring(0,20) }) : "";
+    const mesAno = `${MONTH_NAMES[month]} ${year}`;
+    let msg = `Olá ${p.name}! 👋\n\nSegue o resumo da locação de sala referente a *${mesAno}*:\n\n`;
+    msg += `📊 *Horas utilizadas:* ${p.hours}h\n`;
+    msg += `💰 *Valor total:* R$ ${p.total.toLocaleString("pt-BR", { minimumFractionDigits:2 })}\n\n`;
+    if (pixOk) {
+      msg += `Para pagamento via PIX:\n🔑 *Chave (${config.pixTipo||"PIX"}):* ${config.pixKey}\n`;
+      msg += `📋 *Copia e Cola:*\n${pix}\n\n`;
+    }
+    msg += `Qualquer dúvida, entre em contato. Obrigado! 🏢`;
+    return msg;
+  }
+
+  function sendWA(p) {
+    const phone = p.phone.replace(/\D/g,"");
+    const full = phone.startsWith("55") ? phone : "55" + phone;
+    window.open(`https://wa.me/${full}?text=${encodeURIComponent(waMessage(p))}`, "_blank");
+  }
+
+  return (
+    <div style={{ padding:"32px 32px", maxWidth:960 }} className="fade-up">
+      <div style={{ marginBottom:28 }}>
+        <h2 style={{ fontSize:24, fontWeight:800, color:"#0f172a" }}>Cobrança Mensal</h2>
+        <div style={{ fontSize:14, color:"#64748b", marginTop:2 }}>Gere cobranças com QR Code PIX e envie via WhatsApp</div>
+      </div>
+
+      {/* Month selector */}
+      <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:24, flexWrap:"wrap" }}>
+        <select value={month} onChange={e=>setMonth(+e.target.value)}
+          style={{ border:"1.5px solid #e2e8f0", borderRadius:10, padding:"9px 14px", fontSize:13, background:"#fff", fontFamily:"'Outfit',sans-serif", color:"#334155" }}>
+          {MONTH_NAMES.map((m,i)=><option key={i} value={i}>{m}</option>)}
+        </select>
+        <select value={year} onChange={e=>setYear(+e.target.value)}
+          style={{ border:"1.5px solid #e2e8f0", borderRadius:10, padding:"9px 14px", fontSize:13, background:"#fff", fontFamily:"'Outfit',sans-serif", color:"#334155" }}>
+          {[2024,2025,2026,2027].map(y=><option key={y}>{y}</option>)}
+        </select>
+        <div style={{ marginLeft:"auto", background:"linear-gradient(135deg,#0f172a,#1e3a5f)", color:"#fff", borderRadius:12, padding:"10px 20px", fontSize:14, fontWeight:700 }}>
+          Total: R$ {totalGeral.toLocaleString("pt-BR", { minimumFractionDigits:2 })}
+        </div>
+      </div>
+
+      {!pixOk && (
+        <div style={{ background:"#fffbeb", border:"1.5px solid #fcd34d", borderRadius:12, padding:"14px 18px", marginBottom:20, fontSize:13, color:"#92400e", fontWeight:600 }}>
+          ⚠️ Configure sua chave PIX em <strong>Configurações</strong> para habilitar os QR Codes de cobrança.
+        </div>
+      )}
+
+      {profSummaries.length === 0 ? (
+        <div style={{ textAlign:"center", padding:"60px 0", color:"#94a3b8" }}>
+          <div style={{ fontSize:40 }}>💳</div>
+          <div style={{ fontSize:14, marginTop:8 }}>Nenhuma reserva em {MONTH_NAMES[month]} {year}</div>
+        </div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          {profSummaries.map(p => {
+            const isOpen = expanded === p.name;
+            const pixStr = pixOk ? generatePix({ key:config.pixKey, name:config.pixName, city:config.pixCity, amount:p.total, txid:p.name.replace(/\s/g,"").substring(0,20) }) : "";
+            return (
+              <div key={p.name} style={{ background:"#fff", borderRadius:16, border:"1px solid #e2e8f0", overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.04)" }}>
+                {/* Summary row */}
+                <div style={{ display:"flex", alignItems:"center", gap:16, padding:"18px 22px", cursor:"pointer" }} onClick={()=>setExpanded(isOpen?null:p.name)}>
+                  <div style={{ width:44, height:44, background:"linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>👤</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:15, fontWeight:700, color:"#0f172a" }}>{p.name}</div>
+                    <div style={{ fontSize:12, color:"#64748b" }}>{p.prof?.specialty || "Profissional"} · {p.hours}h em {p.slots} reserva{p.slots!==1?"s":""}</div>
+                  </div>
+                  <div style={{ textAlign:"right", marginRight:12 }}>
+                    <div style={{ fontSize:20, fontWeight:800, color:"#16a34a" }}>R$ {p.total.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                    <div style={{ fontSize:11, color:"#94a3b8" }}>{p.hours}h × R${(p.total/p.hours).toFixed(0)}/h</div>
+                  </div>
+                  <div style={{ fontSize:20, color:"#94a3b8", transition:"transform .2s", transform:isOpen?"rotate(180deg)":"rotate(0)" }}>⌄</div>
+                </div>
+
+                {/* Expanded: QR + actions */}
+                {isOpen && (
+                  <div style={{ borderTop:"1px solid #f1f5f9", padding:"22px 22px", background:"#f8fafc" }}>
+                    <div style={{ display:"flex", gap:24, flexWrap:"wrap" }}>
+                      {/* QR Code */}
+                      <div style={{ flex:"0 0 auto" }}>
+                        {pixOk ? (
+                          <div style={{ background:"#fff", borderRadius:14, padding:16, border:"1px solid #e2e8f0", display:"inline-block", textAlign:"center" }}>
+                            <PixQRCode pixString={pixStr} />
+                            <div style={{ fontSize:11, color:"#64748b", marginTop:8, fontWeight:600 }}>QR Code PIX · R$ {p.total.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                          </div>
+                        ) : (
+                          <div style={{ background:"#fff", borderRadius:14, padding:24, border:"1.5px dashed #e2e8f0", textAlign:"center", color:"#94a3b8" }}>
+                            <div style={{ fontSize:32 }}>⚠️</div>
+                            <div style={{ fontSize:12, marginTop:8 }}>Configure o PIX<br/>em Configurações</div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Info + actions */}
+                      <div style={{ flex:1, minWidth:220 }}>
+                        <div style={{ marginBottom:14 }}>
+                          <div style={{ fontSize:12, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:6 }}>Resumo da cobrança</div>
+                          <div style={{ background:"#fff", borderRadius:10, border:"1px solid #e2e8f0", padding:"12px 14px", fontSize:13, lineHeight:1.8, color:"#334155" }}>
+                            <div>📅 Mês: <strong>{MONTH_NAMES[month]} {year}</strong></div>
+                            <div>⏱ Horas: <strong>{p.hours}h</strong></div>
+                            <div>📊 Reservas: <strong>{p.slots}</strong></div>
+                            <div>💰 Total: <strong style={{ color:"#16a34a" }}>R$ {p.total.toLocaleString("pt-BR",{minimumFractionDigits:2})}</strong></div>
+                            {p.prof?.registroCodigo && <div>🪪 {p.prof.registroTipo||"Reg"}: <strong>{p.prof.registroCodigo}</strong></div>}
+                          </div>
+                        </div>
+
+                        {pixOk && (
+                          <div style={{ marginBottom:12 }}>
+                            <div style={{ fontSize:11, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>PIX Copia e Cola</div>
+                            <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:9, padding:"8px 12px", fontSize:10, fontFamily:"'JetBrains Mono',monospace", color:"#334155", wordBreak:"break-all", lineHeight:1.5, maxHeight:60, overflow:"auto" }}>{pixStr}</div>
+                            <button onClick={()=>navigator.clipboard?.writeText(pixStr).then(()=>{})}
+                              style={{ marginTop:5, background:"#eff6ff", border:"none", borderRadius:7, padding:"6px 12px", fontSize:11, fontWeight:700, color:"#2563eb", cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
+                              📋 Copiar código PIX
+                            </button>
+                          </div>
+                        )}
+
+                        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                          {p.phone ? (
+                            <button onClick={()=>sendWA(p)}
+                              style={{ flex:1, background:"linear-gradient(135deg,#16a34a,#15803d)", color:"#fff", border:"none", borderRadius:10, padding:"11px 16px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", boxShadow:"0 4px 10px rgba(22,163,74,.3)" }}>
+                              💬 Enviar via WhatsApp
+                            </button>
+                          ) : (
+                            <div style={{ flex:1, background:"#f1f5f9", borderRadius:10, padding:"11px 16px", fontSize:12, color:"#94a3b8", textAlign:"center" }}>
+                              Sem telefone cadastrado
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Financeiro ───────────────────────────────────────────────────────────────
 function FinanceiroTab({ financeiro, setFinanceiro }) {
   const today = new Date().toISOString().split("T")[0];
@@ -1378,9 +1646,9 @@ function ChangePasswordSection() {
 // ─── Shared components ────────────────────────────────────────────────────────
 function ModalOverlay({ children, onClose, small }) {
   return (
-    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:16 }}>
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.6)", display:"flex", alignItems:"flex-start", justifyContent:"center", zIndex:200, overflowY:"auto", padding:"32px 16px" }}>
       <div onClick={e=>e.stopPropagation()}
-        style={{ background:"#fff", borderRadius:20, padding:30, width:small?330:460, maxWidth:"100%", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 60px rgba(0,0,0,.2)", border:"1px solid #e2e8f0", animation:"fadeUp .2s ease" }}>
+        style={{ background:"#fff", borderRadius:20, padding:28, width:small?330:480, maxWidth:"100%", boxShadow:"0 24px 60px rgba(0,0,0,.2)", border:"1px solid #e2e8f0", animation:"fadeUp .2s ease", margin:"auto" }}>
         {children}
       </div>
     </div>
