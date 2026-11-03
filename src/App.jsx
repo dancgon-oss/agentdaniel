@@ -40,7 +40,7 @@ function load(key, fallback) {
 function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
 const DEFAULT_ROOMS = [
-  { id: 1, name: "Sala 01", color: "#16A34A" },
+  { id: 1, name: "Sala 01", color: "#72816A" },
   { id: 2, name: "Sala 02", color: "#2563EB" },
 ];
 const HOURS = Array.from({ length: 14 }, (_, i) => `${String(i + 7).padStart(2, "0")}:00`);
@@ -58,9 +58,9 @@ function registroTipoFor(specialty) {
   return "CRP";
 }
 const STATUSES = [
-  { value: "confirmed", label: "Confirmado", color: "#16a34a", bg: "#dcfce7" },
+  { value: "confirmed", label: "Confirmado", color: "#72816A", bg: "#d1f0da" },
   { value: "pending",   label: "Pendente",   color: "#d97706", bg: "#fef3c7" },
-  { value: "waitlist",  label: "Lista de espera", color: "#7c3aed", bg: "#ede9fe" },
+  { value: "waitlist",  label: "Lista de espera", color: "#5a9baa", bg: "#E6F4F7" },
 ];
 const WEEKDAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -116,10 +116,10 @@ function LoginScreen({ onLogin }) {
           <div style={{ width:48, height:48, background:"linear-gradient(135deg,#1e3a5f,#2563eb)", borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>🏢</div>
           <div>
             <div style={{ fontSize:22, fontWeight:800, letterSpacing:"-.5px" }}>GereSala</div>
-            <div style={{ fontSize:12, color:"#94a3b8" }}>Sistema de Gestão de Salas</div>
+            <div style={{ fontSize:12, color:"#8a9a7a" }}>Sistema de Gestão de Salas</div>
           </div>
         </div>
-        <div style={{ fontSize:16, fontWeight:700, marginBottom:22, color:"#1e293b" }}>Acesso ao sistema</div>
+        <div style={{ fontSize:16, fontWeight:700, marginBottom:22, color:"#1e2816" }}>Acesso ao sistema</div>
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div>
             <div style={labelSt}>Usuário</div>
@@ -129,17 +129,17 @@ function LoginScreen({ onLogin }) {
             <div style={labelSt}>Senha</div>
             <div style={{ position:"relative" }}>
               <input value={pass} onChange={e=>{setPass(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&attempt()} type={show?"text":"password"} placeholder="Digite sua senha"
-                style={{ ...inputSt, border:`1.5px solid ${err?"#ef4444":"#e2e8f0"}`, paddingRight:42 }} />
-              <button onClick={()=>setShow(s=>!s)} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:14, color:"#94a3b8" }}>{show?"🙈":"👁"}</button>
+                style={{ ...inputSt, border:`1.5px solid ${err?"#ef4444":"#C8B8A0"}`, paddingRight:42 }} />
+              <button onClick={()=>setShow(s=>!s)} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:14, color:"#8a9a7a" }}>{show?"🙈":"👁"}</button>
             </div>
           </div>
           {err && <div style={{ fontSize:13, color:"#ef4444", background:"#fef2f2", padding:"10px 14px", borderRadius:8, border:"1px solid #fecaca" }}>⚠️ {err}</div>}
           <button onClick={attempt} disabled={!user.trim()||!pass}
-            style={{ background:user.trim()&&pass?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#f1f5f9", color:user.trim()&&pass?"#fff":"#94a3b8", border:"none", borderRadius:12, padding:"14px", fontSize:15, fontWeight:700, cursor:user.trim()&&pass?"pointer":"default", marginTop:4, transition:"all .2s" }}>
+            style={{ background:user.trim()&&pass?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#EDE4D8", color:user.trim()&&pass?"#fff":"#8a9a7a", border:"none", borderRadius:12, padding:"14px", fontSize:15, fontWeight:700, cursor:user.trim()&&pass?"pointer":"default", marginTop:4, transition:"all .2s" }}>
             Entrar
           </button>
         </div>
-        <div style={{ marginTop:24, fontSize:12, color:"#cbd5e1", textAlign:"center" }}>GereSala CRM · Acesso restrito</div>
+        <div style={{ marginTop:24, fontSize:12, color:"#b0a898", textAlign:"center" }}>GereSala CRM · Acesso restrito</div>
       </div>
     </div>
   );
@@ -340,13 +340,13 @@ function AppInner({ onLogout }) {
   ];
 
   return (
-    <div style={{ display:"flex", minHeight:"100vh", background:"#F0F4F8", fontFamily:"'Outfit',sans-serif", color:"#1a1a1a" }}>
+    <div style={{ display:"flex", minHeight:"100vh", background:"#F5EFE5", fontFamily:"'Outfit',sans-serif", color:"#1a2010" }}>
       <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0;}
         ::-webkit-scrollbar{width:5px;height:5px;}
-        ::-webkit-scrollbar-track{background:#e2e8f0;}
-        ::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px;}
+        ::-webkit-scrollbar-track{background:#EDE4D8;}
+        ::-webkit-scrollbar-thumb{background:#8a9a7a;border-radius:3px;}
         .btn{cursor:pointer;border:none;transition:all .15s;font-family:'Outfit',sans-serif;}
         .btn:hover{filter:brightness(.93);}
         .btn:active{transform:scale(.97);}
@@ -354,7 +354,7 @@ function AppInner({ onLogout }) {
         .slot:hover{background:#e8f0fe !important;}
         .slot-cont{cursor:pointer;transition:background .15s;}
         input,select,textarea{font-family:'Outfit',sans-serif;outline:none;}
-        input:focus,select:focus,textarea:focus{border-color:#2563eb !important;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+        input:focus,select:focus,textarea:focus{border-color:#2563eb !important;box-shadow:0 0 0 3px rgba(114,129,106,.15);}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         @keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         .fade-up{animation:fadeUp .2s ease}
@@ -375,7 +375,7 @@ function AppInner({ onLogout }) {
             <div style={{ width:36, height:36, background:"rgba(255,255,255,.12)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>🏢</div>
             {sidebarOpen && <div>
               <div style={{ fontSize:16, fontWeight:800, color:"#fff", letterSpacing:"-.3px", whiteSpace:"nowrap" }}>GereSala</div>
-              <div style={{ fontSize:10, color:"#64748b", fontFamily:"'JetBrains Mono',monospace", whiteSpace:"nowrap" }}>CRM Profissional</div>
+              <div style={{ fontSize:10, color:"#596850", fontFamily:"'JetBrains Mono',monospace", whiteSpace:"nowrap" }}>CRM Profissional</div>
             </div>}
           </div>
         </div>
@@ -410,8 +410,8 @@ function AppInner({ onLogout }) {
         {tab==="dashboard" && (
           <div style={{ padding:"32px 32px", maxWidth:1200 }} className="fade-up">
             <div style={{ marginBottom:28 }}>
-              <h1 style={{ fontSize:26, fontWeight:800, color:"#0f172a", letterSpacing:"-.5px" }}>Painel de Controle</h1>
-              <div style={{ fontSize:14, color:"#64748b", marginTop:4 }}>
+              <h1 style={{ fontSize:26, fontWeight:800, color:"#1a2010", letterSpacing:"-.5px" }}>Painel de Controle</h1>
+              <div style={{ fontSize:14, color:"#596850", marginTop:4 }}>
                 {new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
               </div>
             </div>
@@ -419,20 +419,20 @@ function AppInner({ onLogout }) {
             {/* KPI row */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:28 }}>
               {[
-                { label:"Reservas hoje", val:todayReserved, sub:`de ${totalSlots} slots disponíveis`, icon:"📅", accent:"#2563eb", bg:"#eff6ff" },
-                { label:"Receita do mês", val:`R$ ${thisMonthRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}`, sub:`${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`, icon:"💰", accent:"#16a34a", bg:"#f0fdf4" },
-                { label:"Profissionais", val:professionals.length, sub:"cadastrados no sistema", icon:"👤", accent:"#7c3aed", bg:"#faf5ff" },
-                { label:"Salas ativas", val:rooms.length, sub:"disponíveis para locação", icon:"🏢", accent:"#ea580c", bg:"#fff7ed" },
+                { label:"Reservas hoje", val:todayReserved, sub:`de ${totalSlots} slots disponíveis`, icon:"📅", accent:"#72816A", bg:"#EDF0EB" },
+                { label:"Receita do mês", val:`R$ ${thisMonthRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}`, sub:`${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`, icon:"💰", accent:"#72816A", bg:"#f0f7f2" },
+                { label:"Profissionais", val:professionals.length, sub:"cadastrados no sistema", icon:"👤", accent:"#5a9baa", bg:"#EEF5F7" },
+                { label:"Salas ativas", val:rooms.length, sub:"disponíveis para locação", icon:"🏢", accent:"#5a9baa", bg:"#EEF5F7" },
               ].map(c=>(
                 <div key={c.label} className="kpi-card" style={{ background:c.bg, border:`1.5px solid ${c.accent}20` }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
                     <div style={{ fontSize:11, fontWeight:700, color:c.accent, textTransform:"uppercase", letterSpacing:1 }}>{c.label}</div>
                     <div style={{ fontSize:22 }}>{c.icon}</div>
                   </div>
-                  <div style={{ fontSize:28, fontWeight:800, color:"#0f172a", lineHeight:1 }}>{c.val}</div>
-                  <div style={{ fontSize:12, color:"#64748b", marginTop:6 }}>{c.sub}</div>
+                  <div style={{ fontSize:28, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{c.val}</div>
+                  <div style={{ fontSize:12, color:"#596850", marginTop:6 }}>{c.sub}</div>
                   {c.label==="Reservas hoje" && totalSlots>0 && (
-                    <div style={{ marginTop:10, background:"#dbeafe", borderRadius:4, height:5 }}>
+                    <div style={{ marginTop:10, background:"#EDE4D8", borderRadius:4, height:5 }}>
                       <div style={{ width:`${Math.round((todayReserved/totalSlots)*100)}%`, height:"100%", background:c.accent, borderRadius:4, transition:"width .4s" }} />
                     </div>
                   )}
@@ -445,28 +445,28 @@ function AppInner({ onLogout }) {
               {/* Today schedule */}
               <div className="kpi-card">
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-                  <div style={{ fontSize:15, fontWeight:700, color:"#0f172a" }}>Agenda de Hoje</div>
-                  <button className="btn" onClick={()=>setTab("agenda")} style={{ fontSize:12, color:"#2563eb", background:"#eff6ff", padding:"5px 12px", borderRadius:7, fontWeight:600 }}>Ver agenda →</button>
+                  <div style={{ fontSize:15, fontWeight:700, color:"#1a2010" }}>Agenda de Hoje</div>
+                  <button className="btn" onClick={()=>setTab("agenda")} style={{ fontSize:12, color:"#72816A", background:"#F0EAE0", padding:"5px 12px", borderRadius:7, fontWeight:600 }}>Ver agenda →</button>
                 </div>
                 {todayBookings.length===0
-                  ? <div style={{ textAlign:"center", padding:"32px 0", color:"#94a3b8" }}><div style={{ fontSize:32 }}>📅</div><div style={{ fontSize:13, marginTop:8 }}>Nenhuma reserva hoje</div></div>
+                  ? <div style={{ textAlign:"center", padding:"32px 0", color:"#8a9a7a" }}><div style={{ fontSize:32 }}>📅</div><div style={{ fontSize:13, marginTop:8 }}>Nenhuma reserva hoje</div></div>
                   : <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                     {todayBookings.sort((a,b)=>a[0]<b[0]?-1:1).slice(0,6).map(([key,b])=>{
                       const [,roomId,hour]=key.split("_"); const room=rooms.find(r=>r.id===parseInt(roomId));
                       const st=STATUSES.find(s=>s.value===(b.status||"confirmed"));
                       return (
-                        <div key={key} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#f8fafc", borderRadius:10, cursor:"pointer", border:"1px solid #e2e8f0" }}
+                        <div key={key} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#FBF7F2", borderRadius:10, cursor:"pointer", border:"1px solid #e2e8f0" }}
                           onClick={()=>{setTab("agenda");openBookingModal(todayKey,parseInt(roomId),hour,b);}}>
                           <div style={{ width:4, height:40, background:room?.color||"#888", borderRadius:2, flexShrink:0 }} />
                           <div style={{ flex:1 }}>
-                            <div style={{ fontSize:13, fontWeight:600, color:"#0f172a" }}>{b.name}</div>
-                            <div style={{ fontSize:11, color:"#64748b", fontFamily:"'JetBrains Mono',monospace" }}>{hour} · {room?.name} {b.duration>1?`· ${b.duration}h`:""}</div>
+                            <div style={{ fontSize:13, fontWeight:600, color:"#1a2010" }}>{b.name}</div>
+                            <div style={{ fontSize:11, color:"#596850", fontFamily:"'JetBrains Mono',monospace" }}>{hour} · {room?.name} {b.duration>1?`· ${b.duration}h`:""}</div>
                           </div>
                           <span style={{ fontSize:10, padding:"3px 8px", borderRadius:5, background:st?.bg, color:st?.color, fontWeight:600 }}>{st?.label}</span>
                         </div>
                       );
                     })}
-                    {todayBookings.length>6 && <div style={{ fontSize:12, color:"#94a3b8", textAlign:"center" }}>+{todayBookings.length-6} mais reservas hoje</div>}
+                    {todayBookings.length>6 && <div style={{ fontSize:12, color:"#8a9a7a", textAlign:"center" }}>+{todayBookings.length-6} mais reservas hoje</div>}
                   </div>
                 }
               </div>
@@ -474,7 +474,7 @@ function AppInner({ onLogout }) {
               {/* Rooms + quick actions */}
               <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
                 <div className="kpi-card">
-                  <div style={{ fontSize:15, fontWeight:700, color:"#0f172a", marginBottom:14 }}>Status das Salas</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:"#1a2010", marginBottom:14 }}>Status das Salas</div>
                   {rooms.map(r=>{
                     const roomToday=todayBookings.filter(([k])=>k.includes(`_${r.id}_`)).length;
                     const pct=Math.round((roomToday/HOURS.length)*100);
@@ -485,9 +485,9 @@ function AppInner({ onLogout }) {
                             <div style={{ width:10, height:10, borderRadius:3, background:r.color }} />
                             <span style={{ fontSize:13, fontWeight:600 }}>{r.name}</span>
                           </div>
-                          <span style={{ fontSize:12, color:"#64748b" }}>{roomToday}/{HOURS.length} slots · R${prices[r.id]||0}/h</span>
+                          <span style={{ fontSize:12, color:"#596850" }}>{roomToday}/{HOURS.length} slots · R${prices[r.id]||0}/h</span>
                         </div>
-                        <div style={{ background:"#e2e8f0", borderRadius:4, height:8 }}>
+                        <div style={{ background:"#C8B8A0", borderRadius:4, height:8 }}>
                           <div style={{ width:`${pct}%`, height:"100%", background:r.color, borderRadius:4, transition:"width .4s" }} />
                         </div>
                       </div>
@@ -496,7 +496,7 @@ function AppInner({ onLogout }) {
                 </div>
 
                 <div className="kpi-card">
-                  <div style={{ fontSize:15, fontWeight:700, color:"#0f172a", marginBottom:14 }}>Ações Rápidas</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:"#1a2010", marginBottom:14 }}>Ações Rápidas</div>
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                     {[
                       { icon:"📅", label:"Nova Reserva", fn:()=>{ setTab("agenda"); openBookingModal(todayKey,rooms[0]?.id,HOURS[0],null); }},
@@ -505,7 +505,7 @@ function AppInner({ onLogout }) {
                       { icon:"💰", label:"Financeiro", fn:()=>setTab("financeiro") },
                     ].map(a=>(
                       <button key={a.label} className="btn" onClick={a.fn}
-                        style={{ background:"#f8fafc", border:"1.5px solid #e2e8f0", borderRadius:12, padding:"14px 10px", fontSize:12, fontWeight:600, color:"#334155", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+                        style={{ background:"#FBF7F2", border:"1.5px solid #e2e8f0", borderRadius:12, padding:"14px 10px", fontSize:12, fontWeight:600, color:"#2a3820", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
                         <span style={{ fontSize:22 }}>{a.icon}</span>{a.label}
                       </button>
                     ))}
@@ -523,10 +523,10 @@ function AppInner({ onLogout }) {
             <div style={{ width:200, background:"#fff", borderRight:"1px solid #e2e8f0", padding:16, display:"flex", flexDirection:"column", gap:16, overflowY:"auto", flexShrink:0 }}>
               <div>
                 <div style={sectionLabel}>Hoje</div>
-                <div style={{ fontSize:30, fontWeight:800, color:"#0f172a", lineHeight:1 }}>{todayReserved}</div>
-                <div style={{ fontSize:12, color:"#94a3b8", marginTop:2 }}>de {totalSlots} horários</div>
-                <div style={{ marginTop:8, background:"#e2e8f0", borderRadius:4, height:6 }}>
-                  <div style={{ width:`${Math.round((todayReserved/totalSlots)*100)}%`, height:"100%", background:"#16A34A", borderRadius:4 }} />
+                <div style={{ fontSize:30, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{todayReserved}</div>
+                <div style={{ fontSize:12, color:"#8a9a7a", marginTop:2 }}>de {totalSlots} horários</div>
+                <div style={{ marginTop:8, background:"#C8B8A0", borderRadius:4, height:6 }}>
+                  <div style={{ width:`${Math.round((todayReserved/totalSlots)*100)}%`, height:"100%", background:"#72816A", borderRadius:4 }} />
                 </div>
               </div>
               <div>
@@ -534,23 +534,23 @@ function AppInner({ onLogout }) {
                 {rooms.map(r=>(
                   <div key={r.id} style={{ display:"flex", alignItems:"center", gap:7, padding:"4px 0" }}>
                     <div style={{ width:10, height:10, borderRadius:3, background:r.color, flexShrink:0 }} />
-                    <span style={{ fontSize:12, color:"#475569" }}>{r.name}</span>
-                    <span style={{ marginLeft:"auto", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:"#94a3b8" }}>R${prices[r.id]||0}</span>
+                    <span style={{ fontSize:12, color:"#3a4a2c" }}>{r.name}</span>
+                    <span style={{ marginLeft:"auto", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:"#8a9a7a" }}>R${prices[r.id]||0}</span>
                   </div>
                 ))}
               </div>
               <div>
                 <div style={sectionLabel}>Próximas hoje</div>
-                {todayBookings.length===0&&<div style={{ fontSize:12, color:"#cbd5e1" }}>Nenhuma</div>}
+                {todayBookings.length===0&&<div style={{ fontSize:12, color:"#b0a898" }}>Nenhuma</div>}
                 {todayBookings.sort((a,b)=>a[0]<b[0]?-1:1).slice(0,6).map(([key,b])=>{
                   const [,roomId,hour]=key.split("_"); const room=rooms.find(r=>r.id===parseInt(roomId));
                   const st=STATUSES.find(s=>s.value===(b.status||"confirmed"));
                   return (
-                    <div key={key} style={{ marginBottom:9, cursor:"pointer", padding:"8px 10px", background:"#f8fafc", borderRadius:8, border:"1px solid #f1f5f9" }}
+                    <div key={key} style={{ marginBottom:9, cursor:"pointer", padding:"8px 10px", background:"#FBF7F2", borderRadius:8, border:"1px solid #f1f5f9" }}
                       onClick={()=>{setTab("agenda");openBookingModal(todayKey,parseInt(roomId),hour,b);}}>
                       <div style={{ fontSize:10, fontFamily:"'JetBrains Mono',monospace", color:room?.color||"#888" }}>{hour} · {room?.name}</div>
-                      <div style={{ fontSize:12, fontWeight:600, color:"#1e293b" }}>{b.name}</div>
-                      <div style={{ fontSize:10, color:"#94a3b8" }}>{b.type}{b.duration>1?` · ${b.duration}h`:""}</div>
+                      <div style={{ fontSize:12, fontWeight:600, color:"#1e2816" }}>{b.name}</div>
+                      <div style={{ fontSize:10, color:"#8a9a7a" }}>{b.type}{b.duration>1?` · ${b.duration}h`:""}</div>
                     </div>
                   );
                 })}
@@ -562,16 +562,16 @@ function AppInner({ onLogout }) {
               {/* Toolbar */}
               <div style={{ background:"#fff", borderBottom:"1px solid #e2e8f0", padding:"10px 20px", display:"flex", gap:8, alignItems:"center", flexShrink:0, flexWrap:"wrap" }}>
                 <button className="btn" onClick={()=>{ setCurrentDate(new Date()); setSelectedDay(toKey(new Date())); }}
-                  style={{ background:"#f1f5f9", padding:"7px 14px", borderRadius:8, fontSize:12, fontWeight:600, color:"#334155" }}>Hoje</button>
+                  style={{ background:"#EDE4D8", padding:"7px 14px", borderRadius:8, fontSize:12, fontWeight:600, color:"#2a3820" }}>Hoje</button>
                 <button className="btn" onClick={()=>setCurrentDate(viewMode==="month"?addMonths(currentDate,-1):addDays(currentDate,-7))}
-                  style={{ background:"#f1f5f9", padding:"7px 11px", borderRadius:8, fontSize:14 }}>‹</button>
+                  style={{ background:"#EDE4D8", padding:"7px 11px", borderRadius:8, fontSize:14 }}>‹</button>
                 <button className="btn" onClick={()=>setCurrentDate(viewMode==="month"?addMonths(currentDate,1):addDays(currentDate,7))}
-                  style={{ background:"#f1f5f9", padding:"7px 11px", borderRadius:8, fontSize:14 }}>›</button>
-                <span style={{ fontSize:14, fontWeight:600, color:"#334155", marginLeft:4 }}>{viewMode==="month"?`${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`:monthLabel(weekDays[0])}</span>
+                  style={{ background:"#EDE4D8", padding:"7px 11px", borderRadius:8, fontSize:14 }}>›</button>
+                <span style={{ fontSize:14, fontWeight:600, color:"#2a3820", marginLeft:4 }}>{viewMode==="month"?`${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`:monthLabel(weekDays[0])}</span>
                 <div style={{ marginLeft:"auto", display:"flex", gap:4 }}>
                   {[["day","Dia"],["week","Semana"],["month","Mês"]].map(([v,l])=>(
                     <button key={v} className="btn" onClick={()=>setViewMode(v)}
-                      style={{ background:viewMode===v?"#2563eb":"#f1f5f9", color:viewMode===v?"#fff":"#64748b", padding:"7px 14px", borderRadius:8, fontSize:12, fontWeight:600 }}>{l}</button>
+                      style={{ background:viewMode===v?"#72816A":"#EDE4D8", color:viewMode===v?"#fff":"#596850", padding:"7px 14px", borderRadius:8, fontSize:12, fontWeight:600 }}>{l}</button>
                   ))}
                 </div>
               </div>
@@ -583,7 +583,7 @@ function AppInner({ onLogout }) {
                   <div style={{ flex:1, overflowY:"auto", padding:16 }}>
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4, marginBottom:4 }}>
                       {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map(d=>(
-                        <div key={d} style={{ textAlign:"center", fontSize:11, fontWeight:700, color:"#94a3b8", padding:"4px 0", textTransform:"uppercase", letterSpacing:.8 }}>{d}</div>
+                        <div key={d} style={{ textAlign:"center", fontSize:11, fontWeight:700, color:"#8a9a7a", padding:"4px 0", textTransform:"uppercase", letterSpacing:.8 }}>{d}</div>
                       ))}
                     </div>
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4 }}>
@@ -592,14 +592,14 @@ function AppInner({ onLogout }) {
                         const dayBk=Object.entries(bookings).filter(([k])=>k.startsWith(dk+"_"));
                         return (
                           <div key={i} onClick={()=>{setSelectedDay(dk);setCurrentDate(date);setViewMode("day");}}
-                            style={{ minHeight:80, borderRadius:12, border:isSel?"2px solid #2563eb":isToday?"2px solid #16a34a":"1px solid #e2e8f0", background:curr?"#fff":"#f8fafc", cursor:"pointer", padding:"8px 10px", opacity:curr?1:.4, transition:"all .15s" }}>
-                            <div style={{ fontSize:13, fontWeight:isToday?800:500, color:isToday?"#16a34a":isSel?"#2563eb":"#64748b", marginBottom:6 }}>{date.getDate()}</div>
+                            style={{ minHeight:80, borderRadius:12, border:isSel?"2px solid #2563eb":isToday?"2px solid #16a34a":"1px solid #e2e8f0", background:curr?"#fff":"#FBF7F2", cursor:"pointer", padding:"8px 10px", opacity:curr?1:.4, transition:"all .15s" }}>
+                            <div style={{ fontSize:13, fontWeight:isToday?800:500, color:isToday?"#72816A":isSel?"#72816A":"#596850", marginBottom:6 }}>{date.getDate()}</div>
                             {dayBk.length>0 && (
                               <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
                                 {rooms.map(r=>{ const c=dayBk.filter(([k])=>k.includes(`_${r.id}_`)).length; return c>0?(
                                   <div key={r.id} style={{ display:"flex", alignItems:"center", gap:4 }}>
                                     <div style={{ width:8, height:8, borderRadius:2, background:r.color }} />
-                                    <span style={{ fontSize:10, color:"#64748b" }}>{c}</span>
+                                    <span style={{ fontSize:10, color:"#596850" }}>{c}</span>
                                   </div>):null;})}
                               </div>
                             )}
@@ -612,29 +612,29 @@ function AppInner({ onLogout }) {
               })()}
 
               {/* Day tabs */}
-              {viewMode!=="month" && <div style={{ display:"flex", background:"#fafafa", borderBottom:"1px solid #e2e8f0", flexShrink:0 }}>
+              {viewMode!=="month" && <div style={{ display:"flex", background:"#F8F4EF", borderBottom:"1px solid #e2e8f0", flexShrink:0 }}>
                 <div style={{ width:52, flexShrink:0, borderRight:"1px solid #e2e8f0" }} />
                 {weekDays.map(d=>{
                   const ds=toKey(d); const isSel=ds===selectedDay; const isToday=ds===todayKey;
                   const cnt=Object.keys(bookings).filter(k=>k.startsWith(ds)).length;
                   return (
                     <div key={ds} className="day-pill" onClick={()=>{setSelectedDay(ds);setViewMode("day");}}
-                      style={{ flex:1, padding:"8px 4px", textAlign:"center", borderRight:"1px solid #e2e8f0", cursor:"pointer", background:isSel?"#2563eb":"transparent", minWidth:66, transition:"all .15s" }}>
-                      <div style={{ fontSize:10, color:isSel?"#93c5fd":"#94a3b8", textTransform:"capitalize" }}>{WEEKDAY_NAMES[d.getDay()]}</div>
-                      <div style={{ fontSize:15, fontWeight:isToday?800:500, color:isSel?"#fff":isToday?"#2563eb":"#475569", marginTop:1 }}>{formatBR(ds)}</div>
-                      {cnt>0 && <div style={{ fontSize:10, color:isSel?"#93c5fd":"#16A34A", fontWeight:600 }}>{cnt}</div>}
+                      style={{ flex:1, padding:"8px 4px", textAlign:"center", borderRight:"1px solid #e2e8f0", cursor:"pointer", background:isSel?"#72816A":"transparent", minWidth:66, transition:"all .15s" }}>
+                      <div style={{ fontSize:10, color:isSel?"#93b4ff":"#8a9a7a", textTransform:"capitalize" }}>{WEEKDAY_NAMES[d.getDay()]}</div>
+                      <div style={{ fontSize:15, fontWeight:isToday?800:500, color:isSel?"#fff":isToday?"#72816A":"#3a4a2c", marginTop:1 }}>{formatBR(ds)}</div>
+                      {cnt>0 && <div style={{ fontSize:10, color:isSel?"#93b4ff":"#72816A", fontWeight:600 }}>{cnt}</div>}
                     </div>
                   );
                 })}
               </div>}
 
               {/* Room headers */}
-              {viewMode!=="month" && <div style={{ display:"flex", background:"#fafafa", borderBottom:"1px solid #e2e8f0", flexShrink:0, position:"sticky", top:0, zIndex:5 }}>
+              {viewMode!=="month" && <div style={{ display:"flex", background:"#F8F4EF", borderBottom:"1px solid #e2e8f0", flexShrink:0, position:"sticky", top:0, zIndex:5 }}>
                 <div style={{ width:52, flexShrink:0, borderRight:"1px solid #e2e8f0" }} />
                 {rooms.map(r=>(
                   <div key={r.id} style={{ flex:1, padding:"8px 12px", borderRight:"1px solid #e2e8f0", display:"flex", alignItems:"center", gap:7, minWidth:viewMode==="week"?80:140 }}>
                     <div style={{ width:10, height:10, borderRadius:3, background:r.color, flexShrink:0 }} />
-                    <span style={{ fontSize:13, fontWeight:700, color:"#334155" }}>{r.name}</span>
+                    <span style={{ fontSize:13, fontWeight:700, color:"#2a3820" }}>{r.name}</span>
                   </div>
                 ))}
               </div>}
@@ -646,13 +646,13 @@ function AppInner({ onLogout }) {
                   return (
                     <div key={ds}>
                       {viewMode==="week" && (
-                        <div style={{ padding:"5px 14px", fontSize:11, color:"#94a3b8", background:"#f8fafc", borderBottom:"1px solid #e2e8f0", fontFamily:"'JetBrains Mono',monospace", fontWeight:500 }}>
+                        <div style={{ padding:"5px 14px", fontSize:11, color:"#8a9a7a", background:"#FBF7F2", borderBottom:"1px solid #e2e8f0", fontFamily:"'JetBrains Mono',monospace", fontWeight:500 }}>
                           {WEEKDAY_NAMES[day.getDay()]} {formatBR(ds)}
                         </div>
                       )}
                       {HOURS.map(hour=>(
                         <div key={hour} style={{ display:"flex", borderBottom:"1px solid #f1f5f9" }}>
-                          <div style={{ width:52, flexShrink:0, padding:"10px 4px", borderRight:"1px solid #f1f5f9", fontSize:11, color:"#cbd5e1", fontFamily:"'JetBrains Mono',monospace", textAlign:"center", background:"#fafafa" }}>{hour}</div>
+                          <div style={{ width:52, flexShrink:0, padding:"10px 4px", borderRight:"1px solid #f1f5f9", fontSize:11, color:"#b0a898", fontFamily:"'JetBrains Mono',monospace", textAlign:"center", background:"#F8F4EF" }}>{hour}</div>
                           {rooms.map(room=>{
                             const b=getBooking(ds,room.id,hour);
                             const occ=!b?getOccupyingBooking(ds,room.id,hour):null;
@@ -671,15 +671,15 @@ function AppInner({ onLogout }) {
                                 {b ? (
                                   <div>
                                     <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:4 }}>
-                                      <div style={{ fontSize:12, fontWeight:700, color:"#0f172a", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{b.name}</div>
+                                      <div style={{ fontSize:12, fontWeight:700, color:"#1a2010", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{b.name}</div>
                                       {b.duration>1 && <span style={{ fontSize:10, background:room.color, color:"#fff", padding:"1px 5px", borderRadius:4, flexShrink:0 }}>{b.duration}h</span>}
                                     </div>
                                     <div style={{ fontSize:10, color:room.color, fontWeight:600 }}>{b.type}</div>
                                     {statusObj&&statusObj.value!=="confirmed" && <div style={{ fontSize:10, color:statusObj.color, background:statusObj.bg, display:"inline-block", padding:"1px 5px", borderRadius:3, marginTop:2 }}>{statusObj.label}</div>}
-                                    {b.phone && <div style={{ fontSize:10, color:"#94a3b8", fontFamily:"'JetBrains Mono',monospace" }}>{b.phone}</div>}
+                                    {b.phone && <div style={{ fontSize:10, color:"#8a9a7a", fontFamily:"'JetBrains Mono',monospace" }}>{b.phone}</div>}
                                   </div>
                                 ) : (
-                                  <div style={{ fontSize:11, color:"#e2e8f0", textAlign:"center", lineHeight:"22px" }}>+</div>
+                                  <div style={{ fontSize:11, color:"#C8B8A0", textAlign:"center", lineHeight:"22px" }}>+</div>
                                 )}
                               </div>
                             );
@@ -699,20 +699,20 @@ function AppInner({ onLogout }) {
           <div style={{ padding:"32px 32px", maxWidth:1100 }} className="fade-up">
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
               <div>
-                <h2 style={{ fontSize:24, fontWeight:800, color:"#0f172a" }}>Profissionais</h2>
-                <div style={{ fontSize:14, color:"#64748b", marginTop:2 }}>{professionals.length} cadastrado{professionals.length!==1?"s":""}</div>
+                <h2 style={{ fontSize:24, fontWeight:800, color:"#1a2010" }}>Profissionais</h2>
+                <div style={{ fontSize:14, color:"#596850", marginTop:2 }}>{professionals.length} cadastrado{professionals.length!==1?"s":""}</div>
               </div>
               <button className="btn" onClick={()=>{ setForm({name:"",specialty:SPECIALTIES[0],phone:"",email:"",notes:"",registroTipo:"CRP",registroCodigo:""}); setModal({type:"prof"}); }}
-                style={{ background:"linear-gradient(135deg,#1e3a5f,#2563eb)", color:"#fff", padding:"11px 22px", borderRadius:12, fontSize:13, fontWeight:700, boxShadow:"0 4px 12px rgba(37,99,235,.3)" }}>
+                style={{ background:"linear-gradient(135deg,#1e3a5f,#2563eb)", color:"#fff", padding:"11px 22px", borderRadius:12, fontSize:13, fontWeight:700, boxShadow:"0 4px 12px rgba(83,94,67,.35)" }}>
                 + Novo Profissional
               </button>
             </div>
             <div style={{ marginBottom:20 }}>
               <input value={profSearch} onChange={e=>setProfSearch(e.target.value)} placeholder="🔍  Buscar por nome ou especialidade..."
-                style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:12, padding:"12px 16px", fontSize:14, background:"#fff", color:"#1a1a1a", boxShadow:"0 1px 3px rgba(0,0,0,.04)" }} />
+                style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:12, padding:"12px 16px", fontSize:14, background:"#fff", color:"#1a2010", boxShadow:"0 1px 3px rgba(0,0,0,.04)" }} />
             </div>
             {filteredProfessionals.length===0 && (
-              <div style={{ textAlign:"center", padding:"60px 0", color:"#94a3b8" }}>
+              <div style={{ textAlign:"center", padding:"60px 0", color:"#8a9a7a" }}>
                 <div style={{ fontSize:40 }}>👤</div>
                 <div style={{ fontSize:14, marginTop:8 }}>{profSearch?"Nenhum resultado":"Nenhum profissional cadastrado"}</div>
               </div>
@@ -733,21 +733,21 @@ function AppInner({ onLogout }) {
           <div style={{ padding:"32px 32px", maxWidth:1100 }} className="fade-up">
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24, flexWrap:"wrap", gap:12 }}>
               <div>
-                <h2 style={{ fontSize:24, fontWeight:800, color:"#0f172a" }}>Relatório de Faturamento</h2>
-                <div style={{ fontSize:14, color:"#64748b" }}>{MONTH_NAMES[reportMonth]} {reportYear}</div>
+                <h2 style={{ fontSize:24, fontWeight:800, color:"#1a2010" }}>Relatório de Faturamento</h2>
+                <div style={{ fontSize:14, color:"#596850" }}>{MONTH_NAMES[reportMonth]} {reportYear}</div>
               </div>
               <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                 <select value={reportMonth} onChange={e=>setReportMonth(+e.target.value)}
-                  style={{ background:"#fff", border:"1.5px solid #e2e8f0", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#334155", fontFamily:"'Outfit',sans-serif" }}>
+                  style={{ background:"#fff", border:"1.5px solid #e2e8f0", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#2a3820", fontFamily:"'Outfit',sans-serif" }}>
                   {MONTH_NAMES.map((m,i)=><option key={i} value={i}>{m}</option>)}
                 </select>
                 <select value={reportYear} onChange={e=>setReportYear(+e.target.value)}
-                  style={{ background:"#fff", border:"1.5px solid #e2e8f0", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#334155", fontFamily:"'Outfit',sans-serif" }}>
+                  style={{ background:"#fff", border:"1.5px solid #e2e8f0", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#2a3820", fontFamily:"'Outfit',sans-serif" }}>
                   {[2024,2025,2026,2027].map(y=><option key={y}>{y}</option>)}
                 </select>
                 {reportData.rows.length>0 && (
                   <button className="btn" onClick={()=>exportCSV(reportData.rows,reportMonth,reportYear)}
-                    style={{ background:"#f1f5f9", color:"#334155", padding:"9px 16px", borderRadius:10, fontSize:12, fontWeight:600 }}>⬇ CSV</button>
+                    style={{ background:"#EDE4D8", color:"#2a3820", padding:"9px 16px", borderRadius:10, fontSize:12, fontWeight:600 }}>⬇ CSV</button>
                 )}
               </div>
             </div>
@@ -759,9 +759,9 @@ function AppInner({ onLogout }) {
               <datalist id="report-prof-names">{reportProfNames.map(n=><option key={n} value={n}/>)}</datalist>
               {reportProfFilter&&reportData.rows.length>0&&(
                 <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                  <span style={{ fontSize:13, color:"#475569" }}>Total: <strong style={{ color:"#16a34a" }}>R$ {reportData.total.toLocaleString("pt-BR")}</strong> ({reportData.rows.length} reservas)</span>
+                  <span style={{ fontSize:13, color:"#3a4a2c" }}>Total: <strong style={{ color:"#72816A" }}>R$ {reportData.total.toLocaleString("pt-BR")}</strong> ({reportData.rows.length} reservas)</span>
                   <button className="btn" onClick={()=>repeatProfessionalMonth(reportProfFilter,reportMonth,reportYear,(reportMonth+1)%12,reportMonth===11?reportYear+1:reportYear)}
-                    style={{ background:"linear-gradient(135deg,#1e3a5f,#2563eb)", color:"#fff", padding:"7px 16px", borderRadius:8, fontSize:12, fontWeight:700, boxShadow:"0 2px 8px rgba(37,99,235,.3)" }}>
+                    style={{ background:"linear-gradient(135deg,#1e3a5f,#2563eb)", color:"#fff", padding:"7px 16px", borderRadius:8, fontSize:12, fontWeight:700, boxShadow:"0 2px 8px rgba(83,94,67,.35)" }}>
                     🔁 Repetir para {MONTH_NAMES[(reportMonth+1)%12]}
                   </button>
                 </div>
@@ -770,27 +770,27 @@ function AppInner({ onLogout }) {
 
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:14, marginBottom:28 }}>
               <div style={{ background:"linear-gradient(135deg,#0f172a,#1e3a5f)", color:"#fff", borderRadius:16, padding:22 }}>
-                <div style={{ fontSize:11, color:"#64748b", textTransform:"uppercase", letterSpacing:1, fontFamily:"'JetBrains Mono',monospace" }}>Total Mês</div>
+                <div style={{ fontSize:11, color:"#596850", textTransform:"uppercase", letterSpacing:1, fontFamily:"'JetBrains Mono',monospace" }}>Total Mês</div>
                 <div style={{ fontSize:28, fontWeight:800, marginTop:6 }}>R$ {reportData.total.toLocaleString("pt-BR")}</div>
-                <div style={{ fontSize:12, color:"#475569", marginTop:2 }}>{reportData.rows.length} reservas</div>
+                <div style={{ fontSize:12, color:"#3a4a2c", marginTop:2 }}>{reportData.rows.length} reservas</div>
               </div>
               {rooms.map(r=>{ const rd=reportData.byRoom[r.id]||{}; return (
                 <div key={r.id} style={{ background:"#fff", border:"1.5px solid #e2e8f0", borderRadius:16, padding:22, borderTop:`4px solid ${r.color}` }}>
-                  <div style={{ fontSize:11, color:"#94a3b8", textTransform:"uppercase", letterSpacing:1, fontFamily:"'JetBrains Mono',monospace" }}>{r.name}</div>
+                  <div style={{ fontSize:11, color:"#8a9a7a", textTransform:"uppercase", letterSpacing:1, fontFamily:"'JetBrains Mono',monospace" }}>{r.name}</div>
                   <div style={{ fontSize:24, fontWeight:800, marginTop:6 }}>R$ {(rd.revenue||0).toLocaleString("pt-BR")}</div>
-                  <div style={{ fontSize:12, color:"#94a3b8", marginTop:2 }}>{rd.count||0} reservas</div>
+                  <div style={{ fontSize:12, color:"#8a9a7a", marginTop:2 }}>{rd.count||0} reservas</div>
                 </div>
               );})}
             </div>
 
             {reportData.rows.length===0 ? (
-              <div style={{ textAlign:"center", padding:"60px 0", color:"#94a3b8" }}><div style={{ fontSize:40 }}>📋</div><div style={{ fontSize:14, marginTop:8 }}>Nenhuma reserva neste período</div></div>
+              <div style={{ textAlign:"center", padding:"60px 0", color:"#8a9a7a" }}><div style={{ fontSize:40 }}>📋</div><div style={{ fontSize:14, marginTop:8 }}>Nenhuma reserva neste período</div></div>
             ) : (
               <div style={{ background:"#fff", borderRadius:16, border:"1px solid #e2e8f0", overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.05)" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                  <thead><tr style={{ background:"#f8fafc" }}>
+                  <thead><tr style={{ background:"#FBF7F2" }}>
                     {["Data","Horário","Dur.","Sala","Profissional","Especialidade","Status","Valor"].map(h=>(
-                      <th key={h} style={{ padding:"12px 14px", textAlign:"left", fontSize:11, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, borderBottom:"1px solid #e2e8f0" }}>{h}</th>
+                      <th key={h} style={{ padding:"12px 14px", textAlign:"left", fontSize:11, color:"#8a9a7a", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, borderBottom:"1px solid #e2e8f0" }}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
@@ -798,27 +798,27 @@ function AppInner({ onLogout }) {
                       const st=STATUSES.find(s=>s.value===r.status)||STATUSES[0];
                       return (
                         <tr key={i}>
-                          <td style={{ padding:"11px 14px", fontSize:13, borderBottom:"1px solid #f1f5f9", fontFamily:"'JetBrains Mono',monospace", color:"#64748b" }}>{formatBR(r.day)}</td>
+                          <td style={{ padding:"11px 14px", fontSize:13, borderBottom:"1px solid #f1f5f9", fontFamily:"'JetBrains Mono',monospace", color:"#596850" }}>{formatBR(r.day)}</td>
                           <td style={{ padding:"11px 14px", fontSize:13, borderBottom:"1px solid #f1f5f9", fontFamily:"'JetBrains Mono',monospace" }}>{r.hour}</td>
-                          <td style={{ padding:"11px 14px", fontSize:13, borderBottom:"1px solid #f1f5f9", color:"#94a3b8" }}>{r.duration}h</td>
+                          <td style={{ padding:"11px 14px", fontSize:13, borderBottom:"1px solid #f1f5f9", color:"#8a9a7a" }}>{r.duration}h</td>
                           <td style={{ padding:"11px 14px", fontSize:13, borderBottom:"1px solid #f1f5f9" }}>
                             <span style={{ display:"inline-flex", alignItems:"center", gap:5 }}>
                               <span style={{ width:8, height:8, borderRadius:2, background:r.color, display:"inline-block" }} />{r.room}
                             </span>
                           </td>
                           <td style={{ padding:"11px 14px", fontSize:13, fontWeight:600, borderBottom:"1px solid #f1f5f9" }}>{r.name}</td>
-                          <td style={{ padding:"11px 14px", fontSize:12, color:"#64748b", borderBottom:"1px solid #f1f5f9" }}>{r.type}</td>
+                          <td style={{ padding:"11px 14px", fontSize:12, color:"#596850", borderBottom:"1px solid #f1f5f9" }}>{r.type}</td>
                           <td style={{ padding:"11px 14px", borderBottom:"1px solid #f1f5f9" }}>
                             <span style={{ fontSize:11, color:st.color, background:st.bg, padding:"3px 9px", borderRadius:6, fontWeight:700 }}>{st.label}</span>
                           </td>
-                          <td style={{ padding:"11px 14px", fontSize:13, fontWeight:700, color:"#16a34a", borderBottom:"1px solid #f1f5f9" }}>R$ {r.price}</td>
+                          <td style={{ padding:"11px 14px", fontSize:13, fontWeight:700, color:"#72816A", borderBottom:"1px solid #f1f5f9" }}>R$ {r.price}</td>
                         </tr>
                       );
                     })}
                   </tbody>
-                  <tfoot><tr style={{ background:"#f8fafc" }}>
+                  <tfoot><tr style={{ background:"#FBF7F2" }}>
                     <td colSpan={7} style={{ padding:"13px 14px", fontSize:13, fontWeight:700, textAlign:"right", borderTop:"1px solid #e2e8f0" }}>Total:</td>
-                    <td style={{ padding:"13px 14px", fontSize:16, fontWeight:800, color:"#16a34a", borderTop:"1px solid #e2e8f0" }}>R$ {reportData.total.toLocaleString("pt-BR")}</td>
+                    <td style={{ padding:"13px 14px", fontSize:16, fontWeight:800, color:"#72816A", borderTop:"1px solid #e2e8f0" }}>R$ {reportData.total.toLocaleString("pt-BR")}</td>
                   </tr></tfoot>
                 </table>
               </div>
@@ -837,26 +837,26 @@ function AppInner({ onLogout }) {
           <div style={{ padding:"32px 32px", maxWidth:860 }} className="fade-up">
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
               <div>
-                <h2 style={{ fontSize:24, fontWeight:800, color:"#0f172a" }}>Configurações</h2>
-                <div style={{ fontSize:14, color:"#64748b" }}>Salas, preços e acesso ao sistema</div>
+                <h2 style={{ fontSize:24, fontWeight:800, color:"#1a2010" }}>Configurações</h2>
+                <div style={{ fontSize:14, color:"#596850" }}>Salas, preços e acesso ao sistema</div>
               </div>
-              <button className="btn" onClick={()=>{ setForm({name:"",color:"#16A34A"}); setModal({type:"room"}); }}
-                style={{ background:"linear-gradient(135deg,#1e3a5f,#2563eb)", color:"#fff", padding:"11px 22px", borderRadius:12, fontSize:13, fontWeight:700, boxShadow:"0 4px 12px rgba(37,99,235,.3)" }}>
+              <button className="btn" onClick={()=>{ setForm({name:"",color:"#72816A"}); setModal({type:"room"}); }}
+                style={{ background:"linear-gradient(135deg,#1e3a5f,#2563eb)", color:"#fff", padding:"11px 22px", borderRadius:12, fontSize:13, fontWeight:700, boxShadow:"0 4px 12px rgba(83,94,67,.35)" }}>
                 + Nova Sala
               </button>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:16, marginBottom:32 }}>
               {rooms.map(r=>(
                 <div key={r.id} style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:16, padding:22, borderTop:`5px solid ${r.color}`, boxShadow:"0 1px 4px rgba(0,0,0,.04)" }}>
-                  <div style={{ fontSize:17, fontWeight:800, marginBottom:4, color:"#0f172a" }}>{r.name}</div>
-                  <div style={{ fontSize:12, color:"#94a3b8", marginBottom:16 }}>Cor: <span style={{ background:r.color, padding:"1px 8px", borderRadius:4, color:"#fff", fontSize:11 }}>{r.color}</span></div>
+                  <div style={{ fontSize:17, fontWeight:800, marginBottom:4, color:"#1a2010" }}>{r.name}</div>
+                  <div style={{ fontSize:12, color:"#8a9a7a", marginBottom:16 }}>Cor: <span style={{ background:r.color, padding:"1px 8px", borderRadius:4, color:"#fff", fontSize:11 }}>{r.color}</span></div>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
-                    <span style={{ fontSize:13, color:"#475569", fontWeight:500 }}>R$/hora:</span>
+                    <span style={{ fontSize:13, color:"#3a4a2c", fontWeight:500 }}>R$/hora:</span>
                     <input type="number" value={prices[r.id]||0} onChange={e=>setPrices(p=>({...p,[r.id]:+e.target.value}))}
-                      style={{ width:88, border:"1.5px solid #e2e8f0", borderRadius:8, padding:"6px 10px", fontSize:15, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:"#0f172a" }} />
+                      style={{ width:88, border:"1.5px solid #e2e8f0", borderRadius:8, padding:"6px 10px", fontSize:15, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:"#1a2010" }} />
                   </div>
                   <button className="btn" onClick={()=>{ setForm({...r}); setModal({type:"room",existing:true}); }}
-                    style={{ width:"100%", background:"#f8fafc", padding:"9px", borderRadius:9, fontSize:12, fontWeight:600, color:"#475569", border:"1px solid #e2e8f0" }}>
+                    style={{ width:"100%", background:"#FBF7F2", padding:"9px", borderRadius:9, fontSize:12, fontWeight:600, color:"#3a4a2c", border:"1px solid #e2e8f0" }}>
                     ✏️ Editar nome/cor
                   </button>
                 </div>
@@ -864,35 +864,35 @@ function AppInner({ onLogout }) {
             </div>
             {/* PIX Config */}
           <div style={{ background:"#fff", borderRadius:16, border:"1px solid #e2e8f0", padding:24, maxWidth:480, boxShadow:"0 1px 4px rgba(0,0,0,.04)", marginBottom:24 }}>
-            <div style={{ fontSize:15, fontWeight:700, color:"#0f172a", marginBottom:4 }}>💳 Configuração PIX</div>
-            <div style={{ fontSize:12, color:"#94a3b8", marginBottom:16 }}>Dados usados para gerar cobranças automáticas</div>
+            <div style={{ fontSize:15, fontWeight:700, color:"#1a2010", marginBottom:4 }}>💳 Configuração PIX</div>
+            <div style={{ fontSize:12, color:"#8a9a7a", marginBottom:16 }}>Dados usados para gerar cobranças automáticas</div>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
               <div>
-                <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Tipo de chave</div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#8a9a7a", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Tipo de chave</div>
                 <select value={config.pixTipo||"Chave aleatória"} onChange={e=>setConfig(c=>({...c,pixTipo:e.target.value}))}
-                  style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#f8fafc" }}>
+                  style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#FBF7F2" }}>
                   {["CPF","CNPJ","E-mail","Telefone","Chave aleatória"].map(t=><option key={t}>{t}</option>)}
                 </select>
               </div>
               <div>
-                <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Chave PIX</div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#8a9a7a", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Chave PIX</div>
                 <input value={config.pixKey||""} onChange={e=>setConfig(c=>({...c,pixKey:e.target.value}))} placeholder="Sua chave PIX"
-                  style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#f8fafc" }} />
+                  style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#FBF7F2" }} />
               </div>
               <div style={{ display:"flex", gap:10 }}>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Nome beneficiário</div>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#8a9a7a", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Nome beneficiário</div>
                   <input value={config.pixName||""} onChange={e=>setConfig(c=>({...c,pixName:e.target.value}))} placeholder="Ex: Maria Silva"
-                    style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#f8fafc" }} />
+                    style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#FBF7F2" }} />
                 </div>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Cidade</div>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#8a9a7a", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>Cidade</div>
                   <input value={config.pixCity||""} onChange={e=>setConfig(c=>({...c,pixCity:e.target.value}))} placeholder="Ex: SAO PAULO"
-                    style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#f8fafc" }} />
+                    style={{ width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif", background:"#FBF7F2" }} />
                 </div>
               </div>
               {config.pixKey && config.pixName && config.pixCity && (
-                <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:9, padding:"10px 14px", fontSize:12, color:"#16a34a", fontWeight:600 }}>
+                <div style={{ background:"#f0f7f2", border:"1px solid #bbf7d0", borderRadius:9, padding:"10px 14px", fontSize:12, color:"#72816A", fontWeight:600 }}>
                   ✅ PIX configurado — cobranças automáticas ativadas
                 </div>
               )}
@@ -909,12 +909,12 @@ function AppInner({ onLogout }) {
         <ModalOverlay onClose={()=>setModal(null)}>
           <div style={{ marginBottom:20, display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
             <div>
-              <div style={{ fontSize:18, fontWeight:800, color:"#0f172a" }}>{modal.existing?"Editar Reserva":"Nova Reserva"}</div>
-              <div style={{ fontSize:12, color:"#94a3b8", fontFamily:"'JetBrains Mono',monospace", marginTop:3 }}>
+              <div style={{ fontSize:18, fontWeight:800, color:"#1a2010" }}>{modal.existing?"Editar Reserva":"Nova Reserva"}</div>
+              <div style={{ fontSize:12, color:"#8a9a7a", fontFamily:"'JetBrains Mono',monospace", marginTop:3 }}>
                 {rooms.find(r=>r.id===form.roomId)?.name} · {form.hour} · {formatBR(form.day)}
               </div>
             </div>
-            <button className="btn" onClick={()=>setModal(null)} style={{ fontSize:22, color:"#94a3b8", background:"transparent" }}>×</button>
+            <button className="btn" onClick={()=>setModal(null)} style={{ fontSize:22, color:"#8a9a7a", background:"transparent" }}>×</button>
           </div>
           {professionals.length>0 && (
             <div style={{ marginBottom:14 }}>
@@ -941,7 +941,7 @@ function AppInner({ onLogout }) {
                 <div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
                     <FormLabel>Horários do dia {formatBR(form.day)}</FormLabel>
-                    <span style={{ fontSize:11, color:"#2563eb", fontWeight:700 }}>{sel.length} selecionado{sel.length!==1?"s":""} · R$ {(rate*sel.length).toLocaleString("pt-BR")}</span>
+                    <span style={{ fontSize:11, color:"#72816A", fontWeight:700 }}>{sel.length} selecionado{sel.length!==1?"s":""} · R$ {(rate*sel.length).toLocaleString("pt-BR")}</span>
                   </div>
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:5 }}>
                     {HOURS.map(h => {
@@ -956,8 +956,8 @@ function AppInner({ onLogout }) {
                             return {...f, selectedHours: s.includes(h)?s.filter(x=>x!==h):[...s,h]};
                           });
                         }} style={{ padding:"7px 0", borderRadius:8, fontSize:12, fontWeight:700,
-                          background: busy ? "#f1f5f9" : checked ? "#2563eb" : "#f8fafc",
-                          color: busy ? "#cbd5e1" : checked ? "#fff" : "#334155",
+                          background: busy ? "#EDE4D8" : checked ? "#72816A" : "#FBF7F2",
+                          color: busy ? "#b0a898" : checked ? "#fff" : "#2a3820",
                           border: checked ? "none" : "1px solid #e2e8f0",
                           cursor: busy ? "default" : "pointer",
                           textDecoration: busy ? "line-through" : "none",
@@ -965,7 +965,7 @@ function AppInner({ onLogout }) {
                       );
                     })}
                   </div>
-                  <div style={{ fontSize:11, color:"#94a3b8", marginTop:6 }}>Clique para selecionar. Horários riscados já estão ocupados.</div>
+                  <div style={{ fontSize:11, color:"#8a9a7a", marginTop:6 }}>Clique para selecionar. Horários riscados já estão ocupados.</div>
                 </div>
               );
             })()}
@@ -976,12 +976,12 @@ function AppInner({ onLogout }) {
               <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
                 {DURATIONS.map(d=>(
                   <button key={d} className="btn" onClick={()=>setForm(f=>({...f,duration:d}))}
-                    style={{ minWidth:42, flex:"1 0 auto", padding:"8px 0", borderRadius:8, fontSize:13, fontWeight:700, background:(form.duration??1)===d?"#2563eb":"#f1f5f9", color:(form.duration??1)===d?"#fff":"#475569" }}>
+                    style={{ minWidth:42, flex:"1 0 auto", padding:"8px 0", borderRadius:8, fontSize:13, fontWeight:700, background:(form.duration??1)===d?"#72816A":"#EDE4D8", color:(form.duration??1)===d?"#fff":"#3a4a2c" }}>
                     {d}h
                   </button>
                 ))}
               </div>
-              {(form.duration??1)>1 && <div style={{ fontSize:12, color:"#16a34a", marginTop:5, fontWeight:600 }}>Total: R$ {(hourlyRateFor(form.roomId,form.profId,form.name)*(form.duration??1)).toLocaleString("pt-BR")}</div>}
+              {(form.duration??1)>1 && <div style={{ fontSize:12, color:"#72816A", marginTop:5, fontWeight:600 }}>Total: R$ {(hourlyRateFor(form.roomId,form.profId,form.name)*(form.duration??1)).toLocaleString("pt-BR")}</div>}
             </div>}
             <div>
               <FormLabel>Status</FormLabel>
@@ -1006,7 +1006,7 @@ function AppInner({ onLogout }) {
                 </button>
                 {form.phone && (
                   <button className="btn" onClick={()=>{ const room=rooms.find(r=>r.id===form.roomId); openWhatsApp(form.phone,form.name,room?.name,formatBR(form.day),form.hour); }}
-                    style={{ padding:"9px 14px", borderRadius:9, background:"#f0fdf4", color:"#16a34a", fontSize:12, fontWeight:700, border:"1.5px solid #bbf7d0" }}>
+                    style={{ padding:"9px 14px", borderRadius:9, background:"#f0f7f2", color:"#72816A", fontSize:12, fontWeight:700, border:"1.5px solid #bbf7d0" }}>
                     💬 WhatsApp
                   </button>
                 )}
@@ -1016,7 +1016,7 @@ function AppInner({ onLogout }) {
               const canSave = form.name?.trim() && (modal?.existing || (form.selectedHours && form.selectedHours.length > 0));
               return (
                 <button className="btn" onClick={saveBooking} disabled={!canSave}
-                  style={{ marginLeft:"auto", padding:"11px 22px", borderRadius:10, background:canSave?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#f1f5f9", color:canSave?"#fff":"#94a3b8", fontSize:14, fontWeight:700, boxShadow:canSave?"0 4px 12px rgba(37,99,235,.3)":"none" }}>
+                  style={{ marginLeft:"auto", padding:"11px 22px", borderRadius:10, background:canSave?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#EDE4D8", color:canSave?"#fff":"#8a9a7a", fontSize:14, fontWeight:700, boxShadow:canSave?"0 4px 12px rgba(83,94,67,.35)":"none" }}>
                   {modal?.existing?"Salvar":`Confirmar ${(form.selectedHours||[]).length} horário${(form.selectedHours||[]).length!==1?"s":""}`}
                 </button>
               );
@@ -1029,8 +1029,8 @@ function AppInner({ onLogout }) {
       {modal?.type==="prof" && (
         <ModalOverlay onClose={()=>setModal(null)}>
           <div style={{ marginBottom:20, display:"flex", justifyContent:"space-between" }}>
-            <div style={{ fontSize:18, fontWeight:800, color:"#0f172a" }}>{modal.existing?"Editar Profissional":"Novo Profissional"}</div>
-            <button className="btn" onClick={()=>setModal(null)} style={{ fontSize:22, color:"#94a3b8", background:"transparent" }}>×</button>
+            <div style={{ fontSize:18, fontWeight:800, color:"#1a2010" }}>{modal.existing?"Editar Profissional":"Novo Profissional"}</div>
+            <button className="btn" onClick={()=>setModal(null)} style={{ fontSize:22, color:"#8a9a7a", background:"transparent" }}>×</button>
           </div>
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <div><FormLabel>Nome *</FormLabel><input value={form.name||""} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nome completo" style={fmInput} /></div>
@@ -1054,7 +1054,7 @@ function AppInner({ onLogout }) {
             <div><FormLabel>E-mail</FormLabel><input value={form.email||""} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="email@exemplo.com" style={fmInput} /></div>
             <div><FormLabel>Valor por hora (R$) — opcional</FormLabel>
               <input type="number" value={form.hourlyRate??""} onChange={e=>setForm(f=>({...f,hourlyRate:e.target.value===""?null:+e.target.value}))} placeholder="Deixe em branco para usar o valor da sala" style={fmInput} />
-              <div style={{ fontSize:11, color:"#94a3b8", marginTop:4 }}>Se definido, substitui o preço padrão da sala.</div>
+              <div style={{ fontSize:11, color:"#8a9a7a", marginTop:4 }}>Se definido, substitui o preço padrão da sala.</div>
             </div>
             <div><FormLabel>Observações</FormLabel><textarea value={form.notes||""} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} rows={2} style={{ ...fmInput, resize:"none" }} /></div>
           </div>
@@ -1062,7 +1062,7 @@ function AppInner({ onLogout }) {
             {modal.existing && <button className="btn" onClick={()=>setConfirmDel({type:"prof",id:form.id})}
               style={{ padding:"9px 14px", borderRadius:9, background:"#fef2f2", color:"#ef4444", fontSize:12, fontWeight:700, border:"1.5px solid #fecaca" }}>🗑 Remover</button>}
             <button className="btn" onClick={saveProfessional} disabled={!form.name?.trim()}
-              style={{ marginLeft:"auto", padding:"11px 22px", borderRadius:10, background:form.name?.trim()?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#f1f5f9", color:form.name?.trim()?"#fff":"#94a3b8", fontSize:14, fontWeight:700 }}>
+              style={{ marginLeft:"auto", padding:"11px 22px", borderRadius:10, background:form.name?.trim()?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#EDE4D8", color:form.name?.trim()?"#fff":"#8a9a7a", fontSize:14, fontWeight:700 }}>
               Salvar
             </button>
           </div>
@@ -1073,18 +1073,18 @@ function AppInner({ onLogout }) {
       {modal?.type==="room" && (
         <ModalOverlay onClose={()=>setModal(null)}>
           <div style={{ marginBottom:20, display:"flex", justifyContent:"space-between" }}>
-            <div style={{ fontSize:18, fontWeight:800, color:"#0f172a" }}>{modal.existing?"Editar Sala":"Nova Sala"}</div>
-            <button className="btn" onClick={()=>setModal(null)} style={{ fontSize:22, color:"#94a3b8", background:"transparent" }}>×</button>
+            <div style={{ fontSize:18, fontWeight:800, color:"#1a2010" }}>{modal.existing?"Editar Sala":"Nova Sala"}</div>
+            <button className="btn" onClick={()=>setModal(null)} style={{ fontSize:22, color:"#8a9a7a", background:"transparent" }}>×</button>
           </div>
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <div><FormLabel>Nome da sala *</FormLabel><input value={form.name||""} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Ex: Sala 03" style={fmInput} /></div>
             <div>
               <FormLabel>Cor de identificação</FormLabel>
               <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:4 }}>
-                <input type="color" value={form.color||"#16A34A"} onChange={e=>setForm(f=>({...f,color:e.target.value}))}
+                <input type="color" value={form.color||"#72816A"} onChange={e=>setForm(f=>({...f,color:e.target.value}))}
                   style={{ width:52, height:40, border:"1.5px solid #e2e8f0", borderRadius:9, cursor:"pointer", padding:3 }} />
-                <span style={{ fontSize:12, color:"#94a3b8", fontFamily:"'JetBrains Mono',monospace" }}>{form.color}</span>
-                <div style={{ width:28, height:28, borderRadius:7, background:form.color||"#16A34A" }} />
+                <span style={{ fontSize:12, color:"#8a9a7a", fontFamily:"'JetBrains Mono',monospace" }}>{form.color}</span>
+                <div style={{ width:28, height:28, borderRadius:7, background:form.color||"#72816A" }} />
               </div>
             </div>
           </div>
@@ -1092,7 +1092,7 @@ function AppInner({ onLogout }) {
             {modal.existing && <button className="btn" onClick={()=>{ setRooms(r=>r.filter(x=>x.id!==form.id)); setModal(null); showToast("Sala removida.","err"); }}
               style={{ padding:"9px 14px", borderRadius:9, background:"#fef2f2", color:"#ef4444", fontSize:12, fontWeight:700, border:"1.5px solid #fecaca" }}>🗑 Remover</button>}
             <button className="btn" onClick={saveRoom} disabled={!form.name?.trim()}
-              style={{ marginLeft:"auto", padding:"11px 22px", borderRadius:10, background:form.name?.trim()?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#f1f5f9", color:form.name?.trim()?"#fff":"#94a3b8", fontSize:14, fontWeight:700 }}>
+              style={{ marginLeft:"auto", padding:"11px 22px", borderRadius:10, background:form.name?.trim()?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#EDE4D8", color:form.name?.trim()?"#fff":"#8a9a7a", fontSize:14, fontWeight:700 }}>
               Salvar
             </button>
           </div>
@@ -1104,10 +1104,10 @@ function AppInner({ onLogout }) {
         <ModalOverlay onClose={()=>setConfirmDel(null)} small>
           <div style={{ textAlign:"center" }}>
             <div style={{ fontSize:40, marginBottom:12 }}>⚠️</div>
-            <div style={{ fontSize:17, fontWeight:800, marginBottom:8, color:"#0f172a" }}>Confirmar exclusão?</div>
-            <div style={{ fontSize:13, color:"#94a3b8", marginBottom:22 }}>Esta ação não pode ser desfeita.</div>
+            <div style={{ fontSize:17, fontWeight:800, marginBottom:8, color:"#1a2010" }}>Confirmar exclusão?</div>
+            <div style={{ fontSize:13, color:"#8a9a7a", marginBottom:22 }}>Esta ação não pode ser desfeita.</div>
             <div style={{ display:"flex", gap:10 }}>
-              <button className="btn" onClick={()=>setConfirmDel(null)} style={{ flex:1, padding:11, borderRadius:10, background:"#f1f5f9", fontSize:13, fontWeight:600 }}>Cancelar</button>
+              <button className="btn" onClick={()=>setConfirmDel(null)} style={{ flex:1, padding:11, borderRadius:10, background:"#EDE4D8", fontSize:13, fontWeight:600 }}>Cancelar</button>
               <button className="btn" onClick={()=>{ if(confirmDel.type==="booking") deleteBooking(confirmDel.day,confirmDel.roomId,confirmDel.hour); else if(confirmDel.type==="prof") deleteProfessional(confirmDel.id); }}
                 style={{ flex:1, padding:11, borderRadius:10, background:"#ef4444", color:"#fff", fontSize:13, fontWeight:700 }}>Confirmar</button>
             </div>
@@ -1117,7 +1117,7 @@ function AppInner({ onLogout }) {
 
       {/* Toast */}
       {toast && (
-        <div className="toast-anim" style={{ position:"fixed", bottom:28, right:28, background:toast.type==="err"?"#fef2f2":"#f0fdf4", border:`1.5px solid ${toast.type==="err"?"#fca5a5":"#86efac"}`, color:toast.type==="err"?"#ef4444":"#16a34a", padding:"12px 20px", borderRadius:12, fontSize:13, fontWeight:700, zIndex:999, boxShadow:"0 8px 24px rgba(0,0,0,.12)" }}>
+        <div className="toast-anim" style={{ position:"fixed", bottom:28, right:28, background:toast.type==="err"?"#fef2f2":"#f0f7f2", border:`1.5px solid ${toast.type==="err"?"#fca5a5":"#86d4a2"}`, color:toast.type==="err"?"#ef4444":"#72816A", padding:"12px 20px", borderRadius:12, fontSize:13, fontWeight:700, zIndex:999, boxShadow:"0 8px 24px rgba(0,0,0,.12)" }}>
           {toast.type==="err"?"✕ ":"✓ "}{toast.msg}
         </div>
       )}
@@ -1151,28 +1151,28 @@ function ProfCard({ p, bookings, rooms, prices, professionals, onEdit, onRepeat 
         <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
           <div style={{ width:44, height:44, borderRadius:14, background:"linear-gradient(135deg,#0f172a,#1e3a5f)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>{specialtyIcon}</div>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:15, fontWeight:700, color:"#0f172a" }}>{p.name}</div>
-            <div style={{ fontSize:12, color:"#64748b" }}>{p.specialty}</div>
+            <div style={{ fontSize:15, fontWeight:700, color:"#1a2010" }}>{p.name}</div>
+            <div style={{ fontSize:12, color:"#596850" }}>{p.specialty}</div>
           </div>
         </div>
-        {p.registroCodigo&&<div style={{ fontSize:12, color:"#2563eb", fontWeight:700, marginBottom:5, fontFamily:"'JetBrains Mono',monospace" }}>🪪 {p.registroTipo||"CRP"} {p.registroCodigo}</div>}
-        {p.hourlyRate!=null&&p.hourlyRate!==""&&<div style={{ fontSize:12, color:"#16a34a", fontWeight:700, marginBottom:5 }}>💰 R$ {p.hourlyRate}/h (valor próprio)</div>}
-        {p.phone&&<div style={{ fontSize:12, color:"#64748b", fontFamily:"'JetBrains Mono',monospace", marginBottom:4 }}>📱 {p.phone}</div>}
-        {p.email&&<div style={{ fontSize:12, color:"#64748b", marginBottom:4 }}>✉️ {p.email}</div>}
-        {p.notes&&<div style={{ fontSize:11, color:"#94a3b8", marginTop:8, borderTop:"1px solid #f1f5f9", paddingTop:8 }}>{p.notes}</div>}
+        {p.registroCodigo&&<div style={{ fontSize:12, color:"#72816A", fontWeight:700, marginBottom:5, fontFamily:"'JetBrains Mono',monospace" }}>🪪 {p.registroTipo||"CRP"} {p.registroCodigo}</div>}
+        {p.hourlyRate!=null&&p.hourlyRate!==""&&<div style={{ fontSize:12, color:"#72816A", fontWeight:700, marginBottom:5 }}>💰 R$ {p.hourlyRate}/h (valor próprio)</div>}
+        {p.phone&&<div style={{ fontSize:12, color:"#596850", fontFamily:"'JetBrains Mono',monospace", marginBottom:4 }}>📱 {p.phone}</div>}
+        {p.email&&<div style={{ fontSize:12, color:"#596850", marginBottom:4 }}>✉️ {p.email}</div>}
+        {p.notes&&<div style={{ fontSize:11, color:"#8a9a7a", marginTop:8, borderTop:"1px solid #f1f5f9", paddingTop:8 }}>{p.notes}</div>}
       </div>
 
       {/* Action bar */}
-      <div style={{ padding:"10px 16px", background:"#f8fafc", borderTop:"1px solid #f1f5f9", display:"flex", gap:7 }}>
+      <div style={{ padding:"10px 16px", background:"#FBF7F2", borderTop:"1px solid #f1f5f9", display:"flex", gap:7 }}>
         {p.phone && (
           <button className="btn" onClick={e=>{ e.stopPropagation(); window.open(`https://wa.me/55${p.phone.replace(/\D/g,"")}`, "_blank"); }}
-            style={{ flex:1, background:"#f0fdf4", color:"#16a34a", padding:"7px 0", borderRadius:8, fontSize:11, fontWeight:700, border:"1px solid #bbf7d0" }}>
+            style={{ flex:1, background:"#f0f7f2", color:"#72816A", padding:"7px 0", borderRadius:8, fontSize:11, fontWeight:700, border:"1px solid #bbf7d0" }}>
             💬 WhatsApp
           </button>
         )}
         {hasBookings && (
           <button className="btn" onClick={e=>{ e.stopPropagation(); setShowRepeat(r=>!r); }}
-            style={{ flex:1, background:showRepeat?"#dbeafe":"#eff6ff", color:"#2563eb", padding:"7px 0", borderRadius:8, fontSize:11, fontWeight:700, border:"1px solid #bfdbfe" }}>
+            style={{ flex:1, background:showRepeat?"#EDE4D8":"#F0EAE0", color:"#72816A", padding:"7px 0", borderRadius:8, fontSize:11, fontWeight:700, border:"1px solid #bfdbfe" }}>
             🔁 Repetir mês
           </button>
         )}
@@ -1180,17 +1180,17 @@ function ProfCard({ p, bookings, rooms, prices, professionals, onEdit, onRepeat 
 
       {/* Repeat panel */}
       {showRepeat && (
-        <div style={{ padding:"16px 16px", borderTop:"1px solid #e2e8f0", background:"#eff6ff" }}>
+        <div style={{ padding:"16px 16px", borderTop:"1px solid #e2e8f0", background:"#F0EAE0" }}>
           {result!==null ? (
-            <div style={{ textAlign:"center", padding:"8px 0", fontSize:13, fontWeight:700, color:result>0?"#16a34a":"#ef4444" }}>
+            <div style={{ textAlign:"center", padding:"8px 0", fontSize:13, fontWeight:700, color:result>0?"#72816A":"#ef4444" }}>
               {result>0?`✅ ${result} reserva${result!==1?"s":""} copiadas!`:"⚠️ Nenhuma reserva copiada"}
             </div>
           ) : (
             <>
-              <div style={{ fontSize:12, fontWeight:700, color:"#1e40af", marginBottom:12 }}>Copiar reservas para outro mês</div>
+              <div style={{ fontSize:12, fontWeight:700, color:"#535E43", marginBottom:12 }}>Copiar reservas para outro mês</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
                 <div>
-                  <div style={{ fontSize:11, color:"#3b82f6", fontWeight:600, marginBottom:4 }}>De (mês origem)</div>
+                  <div style={{ fontSize:11, color:"#8a9a7a", fontWeight:600, marginBottom:4 }}>De (mês origem)</div>
                   <select value={`${fromYear}-${fromMonth}`} onChange={e=>{ const [y,m]=e.target.value.split("-"); setFromYear(+y); setFromMonth(+m); }}
                     style={{ width:"100%", border:"1.5px solid #bfdbfe", borderRadius:8, padding:"7px 10px", fontSize:12, background:"#fff", fontFamily:"'Outfit',sans-serif" }}>
                     {[2024,2025,2026,2027].flatMap(y=>MONTH_NAMES.map((m,i)=>(
@@ -1199,7 +1199,7 @@ function ProfCard({ p, bookings, rooms, prices, professionals, onEdit, onRepeat 
                   </select>
                 </div>
                 <div>
-                  <div style={{ fontSize:11, color:"#3b82f6", fontWeight:600, marginBottom:4 }}>Para (mês destino)</div>
+                  <div style={{ fontSize:11, color:"#8a9a7a", fontWeight:600, marginBottom:4 }}>Para (mês destino)</div>
                   <select value={`${toYear}-${toMonth}`} onChange={e=>{ const [y,m]=e.target.value.split("-"); setToYear(+y); setToMonth(+m); }}
                     style={{ width:"100%", border:"1.5px solid #bfdbfe", borderRadius:8, padding:"7px 10px", fontSize:12, background:"#fff", fontFamily:"'Outfit',sans-serif" }}>
                     {[2024,2025,2026,2027].flatMap(y=>MONTH_NAMES.map((m,i)=>(
@@ -1209,7 +1209,7 @@ function ProfCard({ p, bookings, rooms, prices, professionals, onEdit, onRepeat 
                 </div>
               </div>
               <button className="btn" onClick={doRepeat}
-                style={{ width:"100%", background:"linear-gradient(135deg,#1e3a5f,#2563eb)", color:"#fff", padding:"9px", borderRadius:9, fontSize:12, fontWeight:700, boxShadow:"0 4px 10px rgba(37,99,235,.3)" }}>
+                style={{ width:"100%", background:"linear-gradient(135deg,#1e3a5f,#2563eb)", color:"#fff", padding:"9px", borderRadius:9, fontSize:12, fontWeight:700, boxShadow:"0 4px 10px rgba(83,94,67,.35)" }}>
                 🔁 Copiar reservas
               </button>
             </>
@@ -1228,7 +1228,7 @@ function PixQRCode({ pixString }) {
     function render() {
       if (!window.QRCode) return;
       ref.current.innerHTML = "";
-      new window.QRCode(ref.current, { text: pixString, width: 180, height: 180, colorDark:"#0f172a", colorLight:"#ffffff" });
+      new window.QRCode(ref.current, { text: pixString, width: 180, height: 180, colorDark:"#1a2010", colorLight:"#ffffff" });
     }
     if (window.QRCode) { render(); return; }
     if (!document.querySelector('script[data-qr]')) {
@@ -1298,18 +1298,18 @@ function CobrancaTab({ bookings, professionals, rooms, prices, hourlyRateFor, co
   return (
     <div style={{ padding:"32px 32px", maxWidth:960 }} className="fade-up">
       <div style={{ marginBottom:28 }}>
-        <h2 style={{ fontSize:24, fontWeight:800, color:"#0f172a" }}>Cobrança Mensal</h2>
-        <div style={{ fontSize:14, color:"#64748b", marginTop:2 }}>Gere cobranças com QR Code PIX e envie via WhatsApp</div>
+        <h2 style={{ fontSize:24, fontWeight:800, color:"#1a2010" }}>Cobrança Mensal</h2>
+        <div style={{ fontSize:14, color:"#596850", marginTop:2 }}>Gere cobranças com QR Code PIX e envie via WhatsApp</div>
       </div>
 
       {/* Month selector */}
       <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:24, flexWrap:"wrap" }}>
         <select value={month} onChange={e=>setMonth(+e.target.value)}
-          style={{ border:"1.5px solid #e2e8f0", borderRadius:10, padding:"9px 14px", fontSize:13, background:"#fff", fontFamily:"'Outfit',sans-serif", color:"#334155" }}>
+          style={{ border:"1.5px solid #e2e8f0", borderRadius:10, padding:"9px 14px", fontSize:13, background:"#fff", fontFamily:"'Outfit',sans-serif", color:"#2a3820" }}>
           {MONTH_NAMES.map((m,i)=><option key={i} value={i}>{m}</option>)}
         </select>
         <select value={year} onChange={e=>setYear(+e.target.value)}
-          style={{ border:"1.5px solid #e2e8f0", borderRadius:10, padding:"9px 14px", fontSize:13, background:"#fff", fontFamily:"'Outfit',sans-serif", color:"#334155" }}>
+          style={{ border:"1.5px solid #e2e8f0", borderRadius:10, padding:"9px 14px", fontSize:13, background:"#fff", fontFamily:"'Outfit',sans-serif", color:"#2a3820" }}>
           {[2024,2025,2026,2027].map(y=><option key={y}>{y}</option>)}
         </select>
         <div style={{ marginLeft:"auto", background:"linear-gradient(135deg,#0f172a,#1e3a5f)", color:"#fff", borderRadius:12, padding:"10px 20px", fontSize:14, fontWeight:700 }}>
@@ -1324,7 +1324,7 @@ function CobrancaTab({ bookings, professionals, rooms, prices, hourlyRateFor, co
       )}
 
       {profSummaries.length === 0 ? (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"#94a3b8" }}>
+        <div style={{ textAlign:"center", padding:"60px 0", color:"#8a9a7a" }}>
           <div style={{ fontSize:40 }}>💳</div>
           <div style={{ fontSize:14, marginTop:8 }}>Nenhuma reserva em {MONTH_NAMES[month]} {year}</div>
         </div>
@@ -1339,29 +1339,29 @@ function CobrancaTab({ bookings, professionals, rooms, prices, hourlyRateFor, co
                 <div style={{ display:"flex", alignItems:"center", gap:16, padding:"18px 22px", cursor:"pointer" }} onClick={()=>setExpanded(isOpen?null:p.name)}>
                   <div style={{ width:44, height:44, background:"linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>👤</div>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontSize:15, fontWeight:700, color:"#0f172a" }}>{p.name}</div>
-                    <div style={{ fontSize:12, color:"#64748b" }}>{p.prof?.specialty || "Profissional"} · {p.hours}h em {p.slots} reserva{p.slots!==1?"s":""}</div>
+                    <div style={{ fontSize:15, fontWeight:700, color:"#1a2010" }}>{p.name}</div>
+                    <div style={{ fontSize:12, color:"#596850" }}>{p.prof?.specialty || "Profissional"} · {p.hours}h em {p.slots} reserva{p.slots!==1?"s":""}</div>
                   </div>
                   <div style={{ textAlign:"right", marginRight:12 }}>
-                    <div style={{ fontSize:20, fontWeight:800, color:"#16a34a" }}>R$ {p.total.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
-                    <div style={{ fontSize:11, color:"#94a3b8" }}>{p.hours}h × R${(p.total/p.hours).toFixed(0)}/h</div>
+                    <div style={{ fontSize:20, fontWeight:800, color:"#72816A" }}>R$ {p.total.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                    <div style={{ fontSize:11, color:"#8a9a7a" }}>{p.hours}h × R${(p.total/p.hours).toFixed(0)}/h</div>
                   </div>
-                  <div style={{ fontSize:20, color:"#94a3b8", transition:"transform .2s", transform:isOpen?"rotate(180deg)":"rotate(0)" }}>⌄</div>
+                  <div style={{ fontSize:20, color:"#8a9a7a", transition:"transform .2s", transform:isOpen?"rotate(180deg)":"rotate(0)" }}>⌄</div>
                 </div>
 
                 {/* Expanded: QR + actions */}
                 {isOpen && (
-                  <div style={{ borderTop:"1px solid #f1f5f9", padding:"22px 22px", background:"#f8fafc" }}>
+                  <div style={{ borderTop:"1px solid #f1f5f9", padding:"22px 22px", background:"#FBF7F2" }}>
                     <div style={{ display:"flex", gap:24, flexWrap:"wrap" }}>
                       {/* QR Code */}
                       <div style={{ flex:"0 0 auto" }}>
                         {pixOk ? (
                           <div style={{ background:"#fff", borderRadius:14, padding:16, border:"1px solid #e2e8f0", display:"inline-block", textAlign:"center" }}>
                             <PixQRCode pixString={pixStr} />
-                            <div style={{ fontSize:11, color:"#64748b", marginTop:8, fontWeight:600 }}>QR Code PIX · R$ {p.total.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                            <div style={{ fontSize:11, color:"#596850", marginTop:8, fontWeight:600 }}>QR Code PIX · R$ {p.total.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
                           </div>
                         ) : (
-                          <div style={{ background:"#fff", borderRadius:14, padding:24, border:"1.5px dashed #e2e8f0", textAlign:"center", color:"#94a3b8" }}>
+                          <div style={{ background:"#fff", borderRadius:14, padding:24, border:"1.5px dashed #e2e8f0", textAlign:"center", color:"#8a9a7a" }}>
                             <div style={{ fontSize:32 }}>⚠️</div>
                             <div style={{ fontSize:12, marginTop:8 }}>Configure o PIX<br/>em Configurações</div>
                           </div>
@@ -1371,22 +1371,22 @@ function CobrancaTab({ bookings, professionals, rooms, prices, hourlyRateFor, co
                       {/* Info + actions */}
                       <div style={{ flex:1, minWidth:220 }}>
                         <div style={{ marginBottom:14 }}>
-                          <div style={{ fontSize:12, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:6 }}>Resumo da cobrança</div>
-                          <div style={{ background:"#fff", borderRadius:10, border:"1px solid #e2e8f0", padding:"12px 14px", fontSize:13, lineHeight:1.8, color:"#334155" }}>
+                          <div style={{ fontSize:12, color:"#8a9a7a", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:6 }}>Resumo da cobrança</div>
+                          <div style={{ background:"#fff", borderRadius:10, border:"1px solid #e2e8f0", padding:"12px 14px", fontSize:13, lineHeight:1.8, color:"#2a3820" }}>
                             <div>📅 Mês: <strong>{MONTH_NAMES[month]} {year}</strong></div>
                             <div>⏱ Horas: <strong>{p.hours}h</strong></div>
                             <div>📊 Reservas: <strong>{p.slots}</strong></div>
-                            <div>💰 Total: <strong style={{ color:"#16a34a" }}>R$ {p.total.toLocaleString("pt-BR",{minimumFractionDigits:2})}</strong></div>
+                            <div>💰 Total: <strong style={{ color:"#72816A" }}>R$ {p.total.toLocaleString("pt-BR",{minimumFractionDigits:2})}</strong></div>
                             {p.prof?.registroCodigo && <div>🪪 {p.prof.registroTipo||"Reg"}: <strong>{p.prof.registroCodigo}</strong></div>}
                           </div>
                         </div>
 
                         {pixOk && (
                           <div style={{ marginBottom:12 }}>
-                            <div style={{ fontSize:11, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>PIX Copia e Cola</div>
-                            <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:9, padding:"8px 12px", fontSize:10, fontFamily:"'JetBrains Mono',monospace", color:"#334155", wordBreak:"break-all", lineHeight:1.5, maxHeight:60, overflow:"auto" }}>{pixStr}</div>
+                            <div style={{ fontSize:11, color:"#8a9a7a", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>PIX Copia e Cola</div>
+                            <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:9, padding:"8px 12px", fontSize:10, fontFamily:"'JetBrains Mono',monospace", color:"#2a3820", wordBreak:"break-all", lineHeight:1.5, maxHeight:60, overflow:"auto" }}>{pixStr}</div>
                             <button onClick={()=>navigator.clipboard?.writeText(pixStr).then(()=>{})}
-                              style={{ marginTop:5, background:"#eff6ff", border:"none", borderRadius:7, padding:"6px 12px", fontSize:11, fontWeight:700, color:"#2563eb", cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
+                              style={{ marginTop:5, background:"#F0EAE0", border:"none", borderRadius:7, padding:"6px 12px", fontSize:11, fontWeight:700, color:"#72816A", cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>
                               📋 Copiar código PIX
                             </button>
                           </div>
@@ -1395,11 +1395,11 @@ function CobrancaTab({ bookings, professionals, rooms, prices, hourlyRateFor, co
                         <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                           {p.phone ? (
                             <button onClick={()=>sendWA(p)}
-                              style={{ flex:1, background:"linear-gradient(135deg,#16a34a,#15803d)", color:"#fff", border:"none", borderRadius:10, padding:"11px 16px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", boxShadow:"0 4px 10px rgba(22,163,74,.3)" }}>
+                              style={{ flex:1, background:"linear-gradient(135deg,#16a34a,#15803d)", color:"#fff", border:"none", borderRadius:10, padding:"11px 16px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", boxShadow:"0 4px 10px rgba(74,124,89,.3)" }}>
                               💬 Enviar via WhatsApp
                             </button>
                           ) : (
-                            <div style={{ flex:1, background:"#f1f5f9", borderRadius:10, padding:"11px 16px", fontSize:12, color:"#94a3b8", textAlign:"center" }}>
+                            <div style={{ flex:1, background:"#EDE4D8", borderRadius:10, padding:"11px 16px", fontSize:12, color:"#8a9a7a", textAlign:"center" }}>
                               Sem telefone cadastrado
                             </div>
                           )}
@@ -1452,7 +1452,7 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
   function toggleStatus(id) { setFinanceiro(f=>f.map(x=>x.id===id?{...x,status:x.status==="pago"?"pendente":"pago"}:x)); }
   function del(id) { setFinanceiro(f=>f.filter(x=>x.id!==id)); setConfirmDel(null); setModal(null); }
   function statusColor(item) {
-    if (item.status==="pago") return {bg:"#f0fdf4",color:"#16a34a",label:"Pago"};
+    if (item.status==="pago") return {bg:"#f0f7f2",color:"#72816A",label:"Pago"};
     if (item.vencimento<today) return {bg:"#fef2f2",color:"#ef4444",label:"Vencido"};
     return {bg:"#fffbeb",color:"#d97706",label:"Pendente"};
   }
@@ -1462,25 +1462,25 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
     <div style={{ padding:"32px 32px", maxWidth:1100 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:24, flexWrap:"wrap", gap:12 }}>
         <div>
-          <h2 style={{ fontSize:24, fontWeight:800, color:"#0f172a" }}>Financeiro</h2>
-          <div style={{ fontSize:14, color:"#64748b" }}>Contas a pagar e a receber · {mesLabel}</div>
+          <h2 style={{ fontSize:24, fontWeight:800, color:"#1a2010" }}>Financeiro</h2>
+          <div style={{ fontSize:14, color:"#596850" }}>Contas a pagar e a receber · {mesLabel}</div>
         </div>
         <div style={{ display:"flex", gap:8 }}>
-          <button onClick={()=>openNew("receber")} style={{ background:"#16a34a", color:"#fff", border:"none", borderRadius:12, padding:"11px 20px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 12px rgba(22,163,74,.3)" }}>+ A Receber</button>
+          <button onClick={()=>openNew("receber")} style={{ background:"#72816A", color:"#fff", border:"none", borderRadius:12, padding:"11px 20px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 12px rgba(74,124,89,.3)" }}>+ A Receber</button>
           <button onClick={()=>openNew("pagar")} style={{ background:"#ef4444", color:"#fff", border:"none", borderRadius:12, padding:"11px 20px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 12px rgba(239,68,68,.3)" }}>+ A Pagar</button>
         </div>
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:14, marginBottom:24 }}>
         {[
-          {label:"A Receber",val:totalRec,sub:`Recebido: R$ ${totalRecPago.toLocaleString("pt-BR",{minimumFractionDigits:2})}`,color:"#16a34a",bg:"#f0fdf4",border:"#bbf7d0"},
+          {label:"A Receber",val:totalRec,sub:`Recebido: R$ ${totalRecPago.toLocaleString("pt-BR",{minimumFractionDigits:2})}`,color:"#72816A",bg:"#f0f7f2",border:"#b8e6c8"},
           {label:"A Pagar",val:totalPag,sub:`Pago: R$ ${totalPagPago.toLocaleString("pt-BR",{minimumFractionDigits:2})}`,color:"#ef4444",bg:"#fef2f2",border:"#fecaca"},
-          {label:"Saldo líquido",val:saldo,sub:"Recebido menos pago",color:saldo>=0?"#2563eb":"#ef4444",bg:"#eff6ff",border:"#bfdbfe"},
+          {label:"Saldo líquido",val:saldo,sub:"Recebido menos pago",color:saldo>=0?"#72816A":"#ef4444",bg:"#F0EAE0",border:"#C8B8A0"},
         ].map(c=>(
           <div key={c.label} style={{ background:c.bg, border:`1.5px solid ${c.border}`, borderRadius:16, padding:"22px 24px" }}>
-            <div style={{ fontSize:11, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:6 }}>{c.label}</div>
+            <div style={{ fontSize:11, color:"#8a9a7a", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, marginBottom:6 }}>{c.label}</div>
             <div style={{ fontSize:26, fontWeight:800, color:c.color }}>R$ {c.val.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
-            <div style={{ fontSize:12, color:"#94a3b8", marginTop:4 }}>{c.sub}</div>
+            <div style={{ fontSize:12, color:"#8a9a7a", marginTop:4 }}>{c.sub}</div>
           </div>
         ))}
       </div>
@@ -1490,47 +1490,47 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
           style={{ border:"1.5px solid #e2e8f0", borderRadius:9, padding:"8px 12px", fontSize:13, background:"#fff", fontFamily:"'Outfit',sans-serif" }} />
         {[["todos","Todos"],["receber","A Receber"],["pagar","A Pagar"]].map(([v,l])=>(
           <button key={v} onClick={()=>setFiltroTipo(v)}
-            style={{ padding:"8px 16px", borderRadius:9, fontSize:12, fontWeight:600, border:"1.5px solid #e2e8f0", cursor:"pointer", background:filtroTipo===v?"#0f172a":"#fff", color:filtroTipo===v?"#fff":"#64748b", fontFamily:"'Outfit',sans-serif" }}>{l}</button>
+            style={{ padding:"8px 16px", borderRadius:9, fontSize:12, fontWeight:600, border:"1.5px solid #e2e8f0", cursor:"pointer", background:filtroTipo===v?"#1a2010":"#fff", color:filtroTipo===v?"#fff":"#596850", fontFamily:"'Outfit',sans-serif" }}>{l}</button>
         ))}
         {["todos","pendente","pago"].map(v=>(
           <button key={v} onClick={()=>setFiltroStatus(v)}
-            style={{ padding:"8px 16px", borderRadius:9, fontSize:12, fontWeight:600, border:"1.5px solid #e2e8f0", cursor:"pointer", background:filtroStatus===v?"#475569":"#fff", color:filtroStatus===v?"#fff":"#64748b", fontFamily:"'Outfit',sans-serif" }}>
+            style={{ padding:"8px 16px", borderRadius:9, fontSize:12, fontWeight:600, border:"1.5px solid #e2e8f0", cursor:"pointer", background:filtroStatus===v?"#3a4a2c":"#fff", color:filtroStatus===v?"#fff":"#596850", fontFamily:"'Outfit',sans-serif" }}>
             {v==="todos"?"Todos status":v==="pago"?"✅ Pago":"⏳ Pendente"}
           </button>
         ))}
       </div>
 
       {lista.length===0 ? (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"#94a3b8" }}><div style={{ fontSize:40 }}>💰</div><div style={{ fontSize:14, marginTop:8 }}>Nenhum lançamento encontrado</div></div>
+        <div style={{ textAlign:"center", padding:"60px 0", color:"#8a9a7a" }}><div style={{ fontSize:40 }}>💰</div><div style={{ fontSize:14, marginTop:8 }}>Nenhum lançamento encontrado</div></div>
       ) : (
         <div style={{ background:"#fff", borderRadius:16, border:"1px solid #e2e8f0", overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.05)" }}>
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead><tr style={{ background:"#f8fafc" }}>
+            <thead><tr style={{ background:"#FBF7F2" }}>
               {["Tipo","Descrição","Categoria","Vencimento","Valor","Status",""].map(h=>(
-                <th key={h} style={{ padding:"12px 14px", textAlign:"left", fontSize:11, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, borderBottom:"1px solid #e2e8f0" }}>{h}</th>
+                <th key={h} style={{ padding:"12px 14px", textAlign:"left", fontSize:11, color:"#8a9a7a", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, borderBottom:"1px solid #e2e8f0" }}>{h}</th>
               ))}
             </tr></thead>
             <tbody>
               {lista.map(item=>{ const s=statusColor(item); return (
                 <tr key={item.id} style={{ borderBottom:"1px solid #f1f5f9" }}>
                   <td style={{ padding:"11px 14px" }}>
-                    <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:6, background:item.tipo==="receber"?"#f0fdf4":"#fef2f2", color:item.tipo==="receber"?"#16a34a":"#ef4444" }}>
+                    <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:6, background:item.tipo==="receber"?"#f0f7f2":"#fef2f2", color:item.tipo==="receber"?"#72816A":"#ef4444" }}>
                       {item.tipo==="receber"?"↓ Receber":"↑ Pagar"}
                     </span>
                   </td>
-                  <td style={{ padding:"11px 14px", fontSize:13, fontWeight:600, color:"#0f172a" }}>{item.descricao}</td>
-                  <td style={{ padding:"11px 14px", fontSize:12, color:"#64748b" }}>{item.categoria}</td>
-                  <td style={{ padding:"11px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:item.vencimento<today&&item.status!=="pago"?"#ef4444":"#475569" }}>
+                  <td style={{ padding:"11px 14px", fontSize:13, fontWeight:600, color:"#1a2010" }}>{item.descricao}</td>
+                  <td style={{ padding:"11px 14px", fontSize:12, color:"#596850" }}>{item.categoria}</td>
+                  <td style={{ padding:"11px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:item.vencimento<today&&item.status!=="pago"?"#ef4444":"#3a4a2c" }}>
                     {item.vencimento.split("-").reverse().join("/")}
                   </td>
-                  <td style={{ padding:"11px 14px", fontSize:13, fontWeight:800, color:item.tipo==="receber"?"#16a34a":"#ef4444" }}>
+                  <td style={{ padding:"11px 14px", fontSize:13, fontWeight:800, color:item.tipo==="receber"?"#72816A":"#ef4444" }}>
                     R$ {parseFloat(item.valor).toLocaleString("pt-BR",{minimumFractionDigits:2})}
                   </td>
                   <td style={{ padding:"11px 14px" }}>
                     <button onClick={()=>toggleStatus(item.id)} style={{ fontSize:11, fontWeight:700, padding:"4px 10px", borderRadius:7, border:"none", cursor:"pointer", background:s.bg, color:s.color, fontFamily:"'Outfit',sans-serif" }}>{s.label}</button>
                   </td>
                   <td style={{ padding:"11px 14px" }}>
-                    <button onClick={()=>openEdit(item)} style={{ background:"#f1f5f9", border:"none", borderRadius:7, padding:"5px 12px", fontSize:11, cursor:"pointer", color:"#475569", fontFamily:"'Outfit',sans-serif", fontWeight:600 }}>✏️ Editar</button>
+                    <button onClick={()=>openEdit(item)} style={{ background:"#EDE4D8", border:"none", borderRadius:7, padding:"5px 12px", fontSize:11, cursor:"pointer", color:"#3a4a2c", fontFamily:"'Outfit',sans-serif", fontWeight:600 }}>✏️ Editar</button>
                   </td>
                 </tr>
               );})}
@@ -1542,14 +1542,14 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
       {modal && (
         <ModalOverlay onClose={()=>setModal(null)}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-            <div style={{ fontSize:18, fontWeight:800, color:"#0f172a" }}>{modal.mode==="new"?(form.tipo==="receber"?"Nova Conta a Receber":"Nova Conta a Pagar"):"Editar Lançamento"}</div>
-            <button onClick={()=>setModal(null)} style={{ fontSize:22, color:"#94a3b8", background:"transparent", border:"none", cursor:"pointer" }}>×</button>
+            <div style={{ fontSize:18, fontWeight:800, color:"#1a2010" }}>{modal.mode==="new"?(form.tipo==="receber"?"Nova Conta a Receber":"Nova Conta a Pagar"):"Editar Lançamento"}</div>
+            <button onClick={()=>setModal(null)} style={{ fontSize:22, color:"#8a9a7a", background:"transparent", border:"none", cursor:"pointer" }}>×</button>
           </div>
           {confirmDel ? (
             <div style={{ textAlign:"center", padding:"20px 0" }}>
-              <div style={{ fontSize:14, marginBottom:20, color:"#0f172a" }}>Excluir este lançamento?</div>
+              <div style={{ fontSize:14, marginBottom:20, color:"#1a2010" }}>Excluir este lançamento?</div>
               <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
-                <button onClick={()=>setConfirmDel(null)} style={{ padding:"10px 22px", borderRadius:10, background:"#f1f5f9", border:"none", cursor:"pointer", fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Cancelar</button>
+                <button onClick={()=>setConfirmDel(null)} style={{ padding:"10px 22px", borderRadius:10, background:"#EDE4D8", border:"none", cursor:"pointer", fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Cancelar</button>
                 <button onClick={()=>del(form.id)} style={{ padding:"10px 22px", borderRadius:10, background:"#ef4444", color:"#fff", border:"none", cursor:"pointer", fontWeight:700, fontFamily:"'Outfit',sans-serif" }}>Excluir</button>
               </div>
             </div>
@@ -1561,7 +1561,7 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
                   {[["receber","↓ A Receber"],["pagar","↑ A Pagar"]].map(([v,l])=>(
                     <button key={v} onClick={()=>setForm(f=>({...f,tipo:v,categoria:v==="receber"?FIN_CATS_REC[0]:FIN_CATS_PAG[0]}))}
                       style={{ flex:1, padding:"9px", borderRadius:9, border:"none", cursor:"pointer", fontWeight:700, fontSize:13, fontFamily:"'Outfit',sans-serif",
-                        background:form.tipo===v?(v==="receber"?"#16a34a":"#ef4444"):"#f1f5f9", color:form.tipo===v?"#fff":"#475569" }}>{l}</button>
+                        background:form.tipo===v?(v==="receber"?"#72816A":"#ef4444"):"#EDE4D8", color:form.tipo===v?"#fff":"#3a4a2c" }}>{l}</button>
                   ))}
                 </div>
               </div>
@@ -1580,7 +1580,7 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
                 <div style={{ display:"flex", gap:8 }}>
                   {[["pendente","⏳ Pendente"],["pago","✅ Pago"]].map(([v,l])=>(
                     <button key={v} onClick={()=>setForm(f=>({...f,status:v}))}
-                      style={{ flex:1, padding:"9px", borderRadius:9, border:"none", cursor:"pointer", fontWeight:700, fontSize:13, fontFamily:"'Outfit',sans-serif", background:form.status===v?"#0f172a":"#f1f5f9", color:form.status===v?"#fff":"#475569" }}>{l}</button>
+                      style={{ flex:1, padding:"9px", borderRadius:9, border:"none", cursor:"pointer", fontWeight:700, fontSize:13, fontFamily:"'Outfit',sans-serif", background:form.status===v?"#1a2010":"#EDE4D8", color:form.status===v?"#fff":"#3a4a2c" }}>{l}</button>
                   ))}
                 </div>
               </div>
@@ -1589,8 +1589,8 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
                 {modal.mode==="edit" && <button onClick={()=>setConfirmDel(true)} style={{ padding:"10px 16px", borderRadius:9, background:"#fef2f2", color:"#ef4444", border:"1.5px solid #fecaca", fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>🗑 Excluir</button>}
                 <button onClick={saveFin} disabled={!form.descricao?.trim()||!form.valor||!form.vencimento}
                   style={{ marginLeft:"auto", padding:"11px 26px", borderRadius:10, border:"none", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"'Outfit',sans-serif",
-                    background:form.descricao?.trim()&&form.valor&&form.vencimento?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#f1f5f9",
-                    color:form.descricao?.trim()&&form.valor&&form.vencimento?"#fff":"#94a3b8" }}>Salvar</button>
+                    background:form.descricao?.trim()&&form.valor&&form.vencimento?"linear-gradient(135deg,#1e3a5f,#2563eb)":"#EDE4D8",
+                    color:form.descricao?.trim()&&form.valor&&form.vencimento?"#fff":"#8a9a7a" }}>Salvar</button>
               </div>
             </div>
           )}
@@ -1619,11 +1619,11 @@ function ChangePasswordSection() {
     <div style={{ background:"#fff", borderRadius:16, border:"1px solid #e2e8f0", padding:24, maxWidth:480, boxShadow:"0 1px 4px rgba(0,0,0,.04)" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
         <div>
-          <div style={{ fontSize:15, fontWeight:700, color:"#0f172a" }}>🔒 Acesso ao sistema</div>
-          <div style={{ fontSize:12, color:"#94a3b8", marginTop:2 }}>Altere usuário e senha de login</div>
+          <div style={{ fontSize:15, fontWeight:700, color:"#1a2010" }}>🔒 Acesso ao sistema</div>
+          <div style={{ fontSize:12, color:"#8a9a7a", marginTop:2 }}>Altere usuário e senha de login</div>
         </div>
         <button onClick={()=>{ setOpen(o=>!o); setMsg(null); }}
-          style={{ background:"#f1f5f9", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"8px 16px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", color:"#475569" }}>
+          style={{ background:"#EDE4D8", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"8px 16px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif", color:"#3a4a2c" }}>
           {open?"Cancelar":"Alterar"}
         </button>
       </div>
@@ -1631,11 +1631,11 @@ function ChangePasswordSection() {
         <div style={{ marginTop:20, display:"flex", flexDirection:"column", gap:12 }}>
           {[["Novo usuário (opcional)",newUser,setNewUser,"text","Deixe em branco para manter"],["Senha atual *",cur,setCur,"password",""],["Nova senha *",n1,setN1,"password","Mínimo 4 caracteres"],["Confirmar nova senha *",n2,setN2,"password",""]].map(([label,val,set,type,hint])=>(
             <div key={label}>
-              <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>{label}</div>
+              <div style={{ fontSize:11, fontWeight:700, color:"#8a9a7a", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 }}>{label}</div>
               <input type={type} value={val} onChange={e=>{ set(e.target.value); setMsg(null); }} placeholder={hint} style={{ width:"100%", boxSizing:"border-box", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, fontFamily:"'Outfit',sans-serif" }} />
             </div>
           ))}
-          {msg && <div style={{ fontSize:12, padding:"9px 13px", borderRadius:8, background:msg.ok?"#f0fdf4":"#fef2f2", color:msg.ok?"#16a34a":"#ef4444", fontWeight:600 }}>{msg.ok?"✅":"⚠️"} {msg.text}</div>}
+          {msg && <div style={{ fontSize:12, padding:"9px 13px", borderRadius:8, background:msg.ok?"#f0f7f2":"#fef2f2", color:msg.ok?"#72816A":"#ef4444", fontWeight:600 }}>{msg.ok?"✅":"⚠️"} {msg.text}</div>}
           <button onClick={savePass} style={{ background:"linear-gradient(135deg,#0f172a,#1e3a5f)", color:"#fff", border:"none", borderRadius:10, padding:"12px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit',sans-serif" }}>Salvar acesso</button>
         </div>
       )}
@@ -1656,10 +1656,10 @@ function ModalOverlay({ children, onClose, small }) {
 }
 
 function FormLabel({ children }) {
-  return <label style={{ fontSize:11, color:"#94a3b8", display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:.9, fontFamily:"'JetBrains Mono',monospace", fontWeight:600 }}>{children}</label>;
+  return <label style={{ fontSize:11, color:"#8a9a7a", display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:.9, fontFamily:"'JetBrains Mono',monospace", fontWeight:600 }}>{children}</label>;
 }
 
-const labelSt = { fontSize:11, fontWeight:700, color:"#64748b", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 };
-const inputSt = { width:"100%", boxSizing:"border-box", border:"1.5px solid #e2e8f0", borderRadius:10, padding:"12px 14px", fontSize:14, outline:"none", fontFamily:"'Outfit',sans-serif", color:"#0f172a", background:"#fff" };
-const fmInput = { width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, color:"#0f172a", background:"#f8fafc", display:"block", fontFamily:"'Outfit',sans-serif", outline:"none" };
-const sectionLabel = { fontSize:10, color:"#94a3b8", textTransform:"uppercase", letterSpacing:1.2, marginBottom:8, fontFamily:"'JetBrains Mono',monospace", fontWeight:700 };
+const labelSt = { fontSize:11, fontWeight:700, color:"#596850", marginBottom:5, textTransform:"uppercase", letterSpacing:.8 };
+const inputSt = { width:"100%", boxSizing:"border-box", border:"1.5px solid #e2e8f0", borderRadius:10, padding:"12px 14px", fontSize:14, outline:"none", fontFamily:"'Outfit',sans-serif", color:"#1a2010", background:"#fff" };
+const fmInput = { width:"100%", border:"1.5px solid #e2e8f0", borderRadius:9, padding:"10px 13px", fontSize:13, color:"#1a2010", background:"#FBF7F2", display:"block", fontFamily:"'Outfit',sans-serif", outline:"none" };
+const sectionLabel = { fontSize:10, color:"#8a9a7a", textTransform:"uppercase", letterSpacing:1.2, marginBottom:8, fontFamily:"'JetBrains Mono',monospace", fontWeight:700 };
