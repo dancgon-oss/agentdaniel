@@ -1380,7 +1380,7 @@ function ModalOverlay({ children, onClose, small }) {
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:16 }}>
       <div onClick={e=>e.stopPropagation()}
-        style={{ background:"#fff", borderRadius:20, padding:30, width:small?330:460, maxWidth:"100%", boxShadow:"0 24px 60px rgba(0,0,0,.2)", border:"1px solid #e2e8f0", animation:"fadeUp .2s ease" }}>
+        style={{ background:"#fff", borderRadius:20, padding:30, width:small?330:460, maxWidth:"100%", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 60px rgba(0,0,0,.2)", border:"1px solid #e2e8f0", animation:"fadeUp .2s ease" }}>
         {children}
       </div>
     </div>
