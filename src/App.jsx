@@ -852,7 +852,7 @@ function AppInner({ onLogout }) {
         {tab==="cobranca" && <CobrancaTab bookings={bookings} professionals={professionals} rooms={rooms} prices={prices} hourlyRateFor={hourlyRateFor} config={config} />}
 
         {/* ══ FINANCEIRO ══ */}
-        {tab==="financeiro" && <FinanceiroTab financeiro={financeiro} setFinanceiro={setFinanceiro} />}
+        {tab==="financeiro" && <FinanceiroTab financeiro={financeiro} setFinanceiro={setFinanceiro} bookings={bookings} professionals={professionals} rooms={rooms} hourlyRateFor={hourlyRateFor} />}
 
         {/* ══ CONFIGURAÇÕES ══ */}
         {tab==="configuracoes" && (
@@ -1440,8 +1440,9 @@ function CobrancaTab({ bookings, professionals, rooms, prices, hourlyRateFor, co
 }
 
 // ─── Financeiro ───────────────────────────────────────────────────────────────
-function FinanceiroTab({ financeiro, setFinanceiro }) {
-  const today = new Date().toISOString().split("T")[0];
+function FinanceiroTab({ financeiro, setFinanceiro, bookings, professionals, rooms, hourlyRateFor }) {
+  const _now = new Date();
+  const today = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,"0")}-${String(_now.getDate()).padStart(2,"0")}`;
   const [filtroTipo, setFiltroTipo] = useState("todos");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [filtroMes, setFiltroMes] = useState(()=>today.slice(0,7));
@@ -1456,10 +1457,18 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
     return true;
   }).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
 
-  const totalRec=financeiro.filter(i=>i.tipo==="receber"&&i.vencimento.startsWith(filtroMes)).reduce((s,i)=>s+i.valor,0);
-  const totalPag=financeiro.filter(i=>i.tipo==="pagar"&&i.vencimento.startsWith(filtroMes)).reduce((s,i)=>s+i.valor,0);
-  const totalRecPago=financeiro.filter(i=>i.tipo==="receber"&&i.status==="pago"&&i.vencimento.startsWith(filtroMes)).reduce((s,i)=>s+i.valor,0);
-  const totalPagPago=financeiro.filter(i=>i.tipo==="pagar"&&i.status==="pago"&&i.vencimento.startsWith(filtroMes)).reduce((s,i)=>s+i.valor,0);
+  // Revenue from bookings in selected month
+  const bookingsRevenue = Object.entries(bookings||{}).reduce((s,[key,b])=>{
+    const day=key.split("_")[0]; const roomId=parseInt(key.split("_")[1]);
+    if (!day.startsWith(filtroMes)) return s;
+    return s + hourlyRateFor(roomId, b.profId, b.name)*(b.duration??1);
+  }, 0);
+
+  const totalRecManual=financeiro.filter(i=>i.tipo==="receber"&&i.vencimento.startsWith(filtroMes)).reduce((s,i)=>s+(parseFloat(i.valor)||0),0);
+  const totalRec=totalRecManual+bookingsRevenue;
+  const totalPag=financeiro.filter(i=>i.tipo==="pagar"&&i.vencimento.startsWith(filtroMes)).reduce((s,i)=>s+(parseFloat(i.valor)||0),0);
+  const totalRecPago=financeiro.filter(i=>i.tipo==="receber"&&i.status==="pago"&&i.vencimento.startsWith(filtroMes)).reduce((s,i)=>s+(parseFloat(i.valor)||0),0)+bookingsRevenue;
+  const totalPagPago=financeiro.filter(i=>i.tipo==="pagar"&&i.status==="pago"&&i.vencimento.startsWith(filtroMes)).reduce((s,i)=>s+(parseFloat(i.valor)||0),0);
   const saldo=totalRecPago-totalPagPago;
 
   function openNew(tipo) { setForm({tipo,descricao:"",valor:"",vencimento:today,categoria:tipo==="receber"?FIN_CATS_REC[0]:FIN_CATS_PAG[0],status:"pendente",obs:""}); setModal({mode:"new"}); }
@@ -1495,7 +1504,7 @@ function FinanceiroTab({ financeiro, setFinanceiro }) {
 
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:14, marginBottom:24 }}>
         {[
-          {label:"A Receber",val:totalRec,sub:`Recebido: R$ ${totalRecPago.toLocaleString("pt-BR",{minimumFractionDigits:2})}`,color:"#72816A",bg:"#f0f7f2",border:"#b8e6c8"},
+          {label:"A Receber",val:totalRec,sub:`Reservas: R$ ${bookingsRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})} · Manual: R$ ${totalRecManual.toLocaleString("pt-BR",{minimumFractionDigits:2})}`,color:"#72816A",bg:"#f0f7f2",border:"#b8e6c8"},
           {label:"A Pagar",val:totalPag,sub:`Pago: R$ ${totalPagPago.toLocaleString("pt-BR",{minimumFractionDigits:2})}`,color:"#ef4444",bg:"#fef2f2",border:"#fecaca"},
           {label:"Saldo líquido",val:saldo,sub:"Recebido menos pago",color:saldo>=0?"#72816A":"#ef4444",bg:"#F0EAE0",border:"#C8B8A0"},
         ].map(c=>(
