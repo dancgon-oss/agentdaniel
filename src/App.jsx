@@ -455,24 +455,24 @@ function AppInner({ onLogout }) {
                 <div style={{ fontSize:11, color:"#596850", marginTop:5 }}>{totalSlots} slots disponíveis hoje</div>
               </div>
 
-              {/* Receita e Despesas empilhados */}
-              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                <div className="kpi-card" style={{ background:"#f0f7f2", border:"1.5px solid #4a7c5920", padding:"16px 20px" }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                    <div style={{ fontSize:11, fontWeight:700, color:"#4a7c59", textTransform:"uppercase", letterSpacing:1 }}>Receita do mês</div>
-                    <div style={{ fontSize:18 }}>💰</div>
-                  </div>
-                  <div style={{ fontSize:24, fontWeight:800, color:"#4a7c59", lineHeight:1 }}>R$ {thisMonthRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
-                  <div style={{ fontSize:11, color:"#596850", marginTop:4 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
+              {/* Receita */}
+              <div className="kpi-card" style={{ background:"#f0f7f2", border:"1.5px solid #4a7c5920" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#4a7c59", textTransform:"uppercase", letterSpacing:1 }}>Receita do mês</div>
+                  <div style={{ fontSize:22 }}>💰</div>
                 </div>
-                <div className="kpi-card" style={{ background:"#fdf3f1", border:"1.5px solid #b85c5020", padding:"16px 20px" }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                    <div style={{ fontSize:11, fontWeight:700, color:"#b85c50", textTransform:"uppercase", letterSpacing:1 }}>Despesas do mês</div>
-                    <div style={{ fontSize:18 }}>📤</div>
-                  </div>
-                  <div style={{ fontSize:24, fontWeight:800, color:"#b85c50", lineHeight:1 }}>R$ {thisMonthExpenses.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
-                  <div style={{ fontSize:11, color:"#8a6a66", marginTop:4 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
+                <div style={{ fontSize:28, fontWeight:800, color:"#4a7c59", lineHeight:1 }}>R$ {thisMonthRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                <div style={{ fontSize:12, color:"#596850", marginTop:8 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
+              </div>
+
+              {/* Despesas */}
+              <div className="kpi-card" style={{ background:"#fdf3f1", border:"1.5px solid #b85c5020" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#b85c50", textTransform:"uppercase", letterSpacing:1 }}>Despesas do mês</div>
+                  <div style={{ fontSize:22 }}>📤</div>
                 </div>
+                <div style={{ fontSize:28, fontWeight:800, color:"#b85c50", lineHeight:1 }}>R$ {thisMonthExpenses.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                <div style={{ fontSize:12, color:"#8a6a66", marginTop:8 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
               </div>
 
               {/* Profissionais */}
