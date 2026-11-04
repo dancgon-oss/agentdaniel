@@ -430,80 +430,61 @@ function AppInner({ onLogout }) {
               </div>
             </div>
 
-            {/* KPI row — 1 métrica por card */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:14, marginBottom:28 }}>
+            {/* KPI row — grupos de cards empilhados por tema */}
+            <div style={{ display:"flex", gap:14, marginBottom:28, flexWrap:"wrap" }}>
 
-              {/* 1. Reservas hoje */}
-              <div className="kpi-card" style={{ background:"#EDF0EB", border:"1.5px solid #72816A30" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:"#72816A", textTransform:"uppercase", letterSpacing:1 }}>Reservas hoje</div>
-                  <div style={{ fontSize:20 }}>📅</div>
+              {/* Grupo: Reservas */}
+              <div style={{ display:"flex", flexDirection:"column", gap:10, flex:"1 1 160px", minWidth:150 }}>
+                <div className="kpi-card" style={{ background:"#EDF0EB", border:"1.5px solid #72816A30" }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:"#72816A", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Reservas hoje</div>
+                  <div style={{ fontSize:30, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{todayReserved}</div>
+                  <div style={{ marginTop:8, background:"#C8B8A0", borderRadius:4, height:4 }}>
+                    <div style={{ width:totalSlots>0?`${Math.round((todayReserved/totalSlots)*100)}%`:"0%", height:"100%", background:"#72816A", borderRadius:4 }} />
+                  </div>
+                  <div style={{ fontSize:11, color:"#596850", marginTop:5 }}>{totalSlots} slots disponíveis</div>
                 </div>
-                <div style={{ fontSize:32, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{todayReserved}</div>
-                <div style={{ marginTop:10, background:"#C8B8A0", borderRadius:4, height:4 }}>
-                  <div style={{ width:totalSlots>0?`${Math.round((todayReserved/totalSlots)*100)}%`:"0%", height:"100%", background:"#72816A", borderRadius:4 }} />
+                <div className="kpi-card" style={{ background:"#EDF0EB", border:"1.5px solid #72816A30" }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:"#72816A", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Reservas no mês</div>
+                  <div style={{ fontSize:30, fontWeight:800, color:"#535E43", lineHeight:1 }}>{thisMonthBookings}</div>
+                  <div style={{ fontSize:11, color:"#596850", marginTop:8 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
                 </div>
-                <div style={{ fontSize:11, color:"#596850", marginTop:5 }}>{totalSlots} slots disponíveis</div>
               </div>
 
-              {/* 2. Reservas do mês */}
-              <div className="kpi-card" style={{ background:"#EDF0EB", border:"1.5px solid #72816A30" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:"#72816A", textTransform:"uppercase", letterSpacing:1 }}>Reservas no mês</div>
-                  <div style={{ fontSize:20 }}>🗓</div>
+              {/* Grupo: Financeiro */}
+              <div style={{ display:"flex", flexDirection:"column", gap:10, flex:"1 1 160px", minWidth:150 }}>
+                <div className="kpi-card" style={{ background:"#f0f7f2", border:"1.5px solid #4a7c5930" }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:"#4a7c59", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Receita do mês</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:"#4a7c59", lineHeight:1 }}>R$ {thisMonthRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                  <div style={{ fontSize:11, color:"#596850", marginTop:8 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
                 </div>
-                <div style={{ fontSize:32, fontWeight:800, color:"#535E43", lineHeight:1 }}>{thisMonthBookings}</div>
-                <div style={{ fontSize:11, color:"#596850", marginTop:10 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
+                <div className="kpi-card" style={{ background:"#fdf3f1", border:"1.5px solid #b85c5030" }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:"#b85c50", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Despesas do mês</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:"#b85c50", lineHeight:1 }}>R$ {thisMonthExpenses.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                  <div style={{ fontSize:11, color:"#8a6a66", marginTop:8 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
+                </div>
               </div>
 
-              {/* 3. Receita do mês */}
-              <div className="kpi-card" style={{ background:"#f0f7f2", border:"1.5px solid #4a7c5930" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:"#4a7c59", textTransform:"uppercase", letterSpacing:1 }}>Receita do mês</div>
-                  <div style={{ fontSize:20 }}>💰</div>
+              {/* Grupo: Profissionais */}
+              <div style={{ display:"flex", flexDirection:"column", gap:10, flex:"1 1 160px", minWidth:150 }}>
+                <div className="kpi-card" style={{ background:"#EEF5F7", border:"1.5px solid #5a9baa30" }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:"#5a9baa", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Profissionais</div>
+                  <div style={{ fontSize:30, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{professionals.length}</div>
+                  <div style={{ fontSize:11, color:"#596850", marginTop:8 }}>cadastrados no sistema</div>
                 </div>
-                <div style={{ fontSize:24, fontWeight:800, color:"#4a7c59", lineHeight:1 }}>R$ {thisMonthRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
-                <div style={{ fontSize:11, color:"#596850", marginTop:10 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
+                <div className="kpi-card" style={{ background:"#EEF5F7", border:"1.5px solid #5a9baa30" }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:"#5a9baa", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Novos no mês</div>
+                  <div style={{ fontSize:30, fontWeight:800, color:"#5a9baa", lineHeight:1 }}>{newProfsThisMonth}</div>
+                  <div style={{ fontSize:11, color:"#596850", marginTop:8 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
+                </div>
               </div>
 
-              {/* 4. Despesas do mês */}
-              <div className="kpi-card" style={{ background:"#fdf3f1", border:"1.5px solid #b85c5030" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:"#b85c50", textTransform:"uppercase", letterSpacing:1 }}>Despesas do mês</div>
-                  <div style={{ fontSize:20 }}>📤</div>
+              {/* Grupo: Salas */}
+              <div style={{ display:"flex", flexDirection:"column", gap:10, flex:"1 1 160px", minWidth:150 }}>
+                <div className="kpi-card" style={{ background:"#FBF7F2", border:"1.5px solid #C8B8A030" }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:"#8a6a40", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Salas ativas</div>
+                  <div style={{ fontSize:30, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{rooms.length}</div>
+                  <div style={{ fontSize:11, color:"#596850", marginTop:8 }}>disponíveis para locação</div>
                 </div>
-                <div style={{ fontSize:24, fontWeight:800, color:"#b85c50", lineHeight:1 }}>R$ {thisMonthExpenses.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
-                <div style={{ fontSize:11, color:"#8a6a66", marginTop:10 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
-              </div>
-
-              {/* 5. Profissionais total */}
-              <div className="kpi-card" style={{ background:"#EEF5F7", border:"1.5px solid #5a9baa30" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:"#5a9baa", textTransform:"uppercase", letterSpacing:1 }}>Profissionais</div>
-                  <div style={{ fontSize:20 }}>👤</div>
-                </div>
-                <div style={{ fontSize:32, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{professionals.length}</div>
-                <div style={{ fontSize:11, color:"#596850", marginTop:10 }}>cadastrados no sistema</div>
-              </div>
-
-              {/* 6. Profissionais novos no mês */}
-              <div className="kpi-card" style={{ background:"#EEF5F7", border:"1.5px solid #5a9baa30" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:"#5a9baa", textTransform:"uppercase", letterSpacing:1 }}>Novos no mês</div>
-                  <div style={{ fontSize:20 }}>✨</div>
-                </div>
-                <div style={{ fontSize:32, fontWeight:800, color:"#5a9baa", lineHeight:1 }}>{newProfsThisMonth}</div>
-                <div style={{ fontSize:11, color:"#596850", marginTop:10 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
-              </div>
-
-              {/* 7. Salas ativas */}
-              <div className="kpi-card" style={{ background:"#FBF7F2", border:"1.5px solid #C8B8A030" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:"#8a6a40", textTransform:"uppercase", letterSpacing:1 }}>Salas ativas</div>
-                  <div style={{ fontSize:20 }}>🏢</div>
-                </div>
-                <div style={{ fontSize:32, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{rooms.length}</div>
-                <div style={{ fontSize:11, color:"#596850", marginTop:10 }}>disponíveis para locação</div>
               </div>
             </div>
 
