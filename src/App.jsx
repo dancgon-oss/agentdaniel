@@ -241,6 +241,13 @@ function AppInner({ onLogout }) {
   }
 
   function deleteBooking(day, roomId, hour) {
+    const now = new Date();
+    const isToday = day === toKey(now);
+    const beforeMidnight = now.getHours() < 23 || (now.getHours() === 23 && now.getMinutes() < 59);
+    if (isToday && beforeMidnight) {
+      showToast("Reservas do dia atual só podem ser excluídas após 23:59.", "err");
+      setConfirmDel(null); setModal(null); return;
+    }
     const b=getBooking(day,roomId,hour); const dur=b?.duration??1; const startIdx=hourToIndex(hour);
     setBookings(prev=>{ const n={...prev}; for(let i=startIdx;i<startIdx+dur;i++) delete n[bookingKey(day,roomId,HOURS[i])]; return n; });
     setConfirmDel(null); setModal(null); showToast("Reserva cancelada.","err");
