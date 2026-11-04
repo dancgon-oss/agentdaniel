@@ -115,7 +115,7 @@ function LoginScreen({ onLogin }) {
         <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:36 }}>
           <div style={{ width:48, height:48, background:"linear-gradient(135deg,#2d3c20,#72816A)", borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>🏢</div>
           <div>
-            <div style={{ fontSize:22, fontWeight:800, letterSpacing:"-.5px" }}>GereSala</div>
+            <div style={{ fontSize:22, fontWeight:800, letterSpacing:"-.5px" }}>Espaço Terapêutico Psi</div>
             <div style={{ fontSize:12, color:"#8a9a7a" }}>Sistema de Gestão de Salas</div>
           </div>
         </div>
@@ -139,7 +139,7 @@ function LoginScreen({ onLogin }) {
             Entrar
           </button>
         </div>
-        <div style={{ marginTop:24, fontSize:12, color:"#b0a898", textAlign:"center" }}>GereSala CRM · Acesso restrito</div>
+        <div style={{ marginTop:24, fontSize:12, color:"#b0a898", textAlign:"center" }}>Espaço Terapêutico Psi · Acesso restrito</div>
       </div>
     </div>
   );
@@ -388,7 +388,7 @@ function AppInner({ onLogout }) {
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:36, height:36, background:"rgba(255,255,255,.12)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>🏢</div>
             {sidebarOpen && <div>
-              <div style={{ fontSize:16, fontWeight:800, color:"#fff", letterSpacing:"-.3px", whiteSpace:"nowrap" }}>GereSala</div>
+              <div style={{ fontSize:12, fontWeight:800, color:"#fff", letterSpacing:"-.2px", whiteSpace:"nowrap", lineHeight:1.3 }}>Espaço Terapêutico Psi</div>
               <div style={{ fontSize:10, color:"#596850", fontFamily:"'JetBrains Mono',monospace", whiteSpace:"nowrap" }}>CRM Profissional</div>
             </div>}
           </div>
