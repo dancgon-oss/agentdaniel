@@ -174,6 +174,7 @@ function AppInner({ onLogout }) {
   const [confirmDel, setConfirmDel] = useState(null);
   const [reportMonth, setReportMonth] = useState(new Date().getMonth());
   const [reportYear, setReportYear] = useState(new Date().getFullYear());
+  const [replicaModal, setReplicaModal] = useState(null);
   const [profSearch, setProfSearch] = useState("");
   const [reportProfFilter, setReportProfFilter] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -286,6 +287,39 @@ function AppInner({ onLogout }) {
     });
     showToast(`${added} reserva${added!==1?"s":""} copiada${added!==1?"s":""} para ${MONTH_NAMES[targetMonth]}${skipped?` · ${skipped} ignorada${skipped!==1?"s":""}`:""}.`, added?"ok":"err");
     return added;
+  }
+
+  function repeatAllMonth(fromMonth, fromYear, toMonth, toYear) {
+    const sourceRows = Object.entries(bookings).filter(([key]) => {
+      const day = key.split("_")[0];
+      const dt = new Date(day+"T12:00:00");
+      return dt.getMonth()===fromMonth && dt.getFullYear()===fromYear;
+    });
+    // only first slot of each multi-hour booking
+    const seen = new Set();
+    const roots = sourceRows.filter(([key,b]) => {
+      const [day,roomIdStr,hour] = key.split("_"); const roomId=parseInt(roomIdStr);
+      const startIdx=hourToIndex(hour);
+      for (let i=startIdx-1;i>=0;i--) { if (getBooking(day,roomId,HOURS[i])) return false; }
+      const uid=`${day}_${roomIdStr}_${hour}`; if(seen.has(uid)) return false; seen.add(uid); return true;
+    });
+    let added=0, skipped=0;
+    setBookings(prev => {
+      const n={...prev};
+      roots.forEach(([key,b]) => {
+        const [day,roomIdStr,hour]=key.split("_"); const roomId=parseInt(roomIdStr);
+        const dt=new Date(day+"T12:00:00");
+        const targetDate=new Date(toYear,toMonth,dt.getDate());
+        if (targetDate.getMonth()!==toMonth) { skipped++; return; }
+        const targetDay=toKey(targetDate); const dur=b.duration??1; const startIdx=hourToIndex(hour);
+        for (let i=startIdx;i<startIdx+dur;i++) { const h=HOURS[i]; if (!h||n[bookingKey(targetDay,roomId,h)]) { skipped++; return; } }
+        for (let i=startIdx;i<startIdx+dur;i++) { n[bookingKey(targetDay,roomId,HOURS[i])]={...b}; }
+        added++;
+      });
+      return n;
+    });
+    showToast(`${added} reserva${added!==1?"s":""} copiada${added!==1?"s":""} para ${MONTH_NAMES[toMonth]}${skipped?` · ${skipped} ignorada${skipped!==1?"s":""}`:""}.`, added?"ok":"err");
+    return { added, skipped };
   }
 
   function saveProfessional() {
@@ -771,6 +805,15 @@ function AppInner({ onLogout }) {
                   <button className="btn" onClick={()=>exportCSV(reportData.rows,reportMonth,reportYear)}
                     style={{ background:"#EDE4D8", color:"#2a3820", padding:"9px 16px", borderRadius:10, fontSize:12, fontWeight:600 }}>⬇ CSV</button>
                 )}
+                {reportData.rows.length>0 && (() => {
+                  const toM=(reportMonth+1)%12; const toY=reportMonth===11?reportYear+1:reportYear;
+                  return (
+                    <button className="btn" onClick={()=>setReplicaModal({fromMonth:reportMonth,fromYear:reportYear,toMonth:toM,toYear:toY})}
+                      style={{ background:"linear-gradient(135deg,#535E43,#72816A)", color:"#fff", padding:"9px 18px", borderRadius:10, fontSize:12, fontWeight:700, boxShadow:"0 4px 12px rgba(83,94,67,.3)" }}>
+                      🔁 Replicar para {MONTH_NAMES[toM]}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
 
@@ -1138,6 +1181,51 @@ function AppInner({ onLogout }) {
       )}
 
       {/* Toast */}
+      {/* ── MODAL REPLICAR MÊS ── */}
+      {replicaModal && (() => {
+        const { fromMonth, fromYear, toMonth, toYear } = replicaModal;
+        // preview: count source bookings (roots only)
+        const seen = new Set();
+        const roots = Object.entries(bookings).filter(([key]) => {
+          const [day,roomIdStr,hour]=key.split("_"); const roomId=parseInt(roomIdStr);
+          const dt=new Date(day+"T12:00:00");
+          if (dt.getMonth()!==fromMonth||dt.getFullYear()!==fromYear) return false;
+          const startIdx=hourToIndex(hour);
+          for (let i=startIdx-1;i>=0;i--) { if (getBooking(day,roomId,HOURS[i])) return false; }
+          const uid=`${day}_${roomIdStr}_${hour}`; if(seen.has(uid)) return false; seen.add(uid); return true;
+        });
+        const byProf = roots.reduce((acc,[,b])=>{ acc[b.name]=(acc[b.name]||0)+1; return acc; },{});
+        return (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:900 }} onClick={()=>setReplicaModal(null)}>
+            <div style={{ background:"#fff", borderRadius:20, padding:32, width:480, maxWidth:"95vw", boxShadow:"0 24px 60px rgba(0,0,0,.3)" }} onClick={e=>e.stopPropagation()}>
+              <div style={{ fontSize:20, fontWeight:800, color:"#1a2010", marginBottom:4 }}>Replicar mês completo</div>
+              <div style={{ fontSize:13, color:"#596850", marginBottom:20 }}>
+                Copiando todos os agendamentos de <strong>{MONTH_NAMES[fromMonth]} {fromYear}</strong> para <strong>{MONTH_NAMES[toMonth]} {toYear}</strong>
+              </div>
+              <div style={{ background:"#F5EFE5", borderRadius:12, padding:"16px 20px", marginBottom:20 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"#8a9a7a", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Resumo — {roots.length} reserva{roots.length!==1?"s":""}</div>
+                {Object.entries(byProf).sort((a,b)=>b[1]-a[1]).map(([name,cnt])=>(
+                  <div key={name} style={{ display:"flex", justifyContent:"space-between", fontSize:13, color:"#2a3820", padding:"4px 0", borderBottom:"1px solid #EDE4D8" }}>
+                    <span>{name}</span>
+                    <span style={{ fontWeight:700, color:"#72816A" }}>{cnt} reserva{cnt!==1?"s":""}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize:12, color:"#8a9a7a", marginBottom:20, lineHeight:1.6 }}>
+                Reservas que caem em fins de semana ou dias que não existem no mês destino serão ignoradas. Após replicar, ajuste manualmente os horários que precisar alterar.
+              </div>
+              <div style={{ display:"flex", gap:10 }}>
+                <button onClick={()=>setReplicaModal(null)} style={{ flex:1, background:"#EDE4D8", color:"#596850", border:"none", borderRadius:12, padding:"13px", fontSize:14, fontWeight:700, cursor:"pointer" }}>Cancelar</button>
+                <button onClick={()=>{ repeatAllMonth(fromMonth,fromYear,toMonth,toYear); setReplicaModal(null); }}
+                  style={{ flex:2, background:"linear-gradient(135deg,#535E43,#72816A)", color:"#fff", border:"none", borderRadius:12, padding:"13px", fontSize:14, fontWeight:700, cursor:"pointer", boxShadow:"0 4px 12px rgba(83,94,67,.3)" }}>
+                  🔁 Confirmar Replicação para {MONTH_NAMES[toMonth]}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {toast && (
         <div className="toast-anim" style={{ position:"fixed", bottom:28, right:28, background:toast.type==="err"?"#fef2f2":"#f0f7f2", border:`1.5px solid ${toast.type==="err"?"#fca5a5":"#86d4a2"}`, color:toast.type==="err"?"#ef4444":"#72816A", padding:"12px 20px", borderRadius:12, fontSize:13, fontWeight:700, zIndex:999, boxShadow:"0 8px 24px rgba(0,0,0,.12)" }}>
           {toast.type==="err"?"✕ ":"✓ "}{toast.msg}
