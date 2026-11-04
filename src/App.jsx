@@ -279,7 +279,7 @@ function AppInner({ onLogout }) {
   function saveProfessional() {
     if (!form.name?.trim()) return;
     if (form.id) { setProfessionals(p=>p.map(x=>x.id===form.id?{...form}:x)); }
-    else { setProfessionals(p=>[...p,{...form,id:Date.now()}]); }
+    else { setProfessionals(p=>[...p,{...form,id:Date.now(),createdAt:new Date().toISOString()}]); }
     setModal(null); showToast("Profissional salvo!");
   }
   function deleteProfessional(id) { setProfessionals(p=>p.filter(x=>x.id!==id)); setConfirmDel(null); setModal(null); showToast("Profissional removido.","err"); }
@@ -326,13 +326,27 @@ function AppInner({ onLogout }) {
   const displayDays = viewMode==="week" ? weekDays : [weekDays.find(d=>toKey(d)===selectedDay)||new Date(selectedDay+"T12:00:00")];
   const filteredProfessionals = professionals.filter(p=>p.name.toLowerCase().includes(profSearch.toLowerCase())||(p.specialty||"").toLowerCase().includes(profSearch.toLowerCase()));
 
-  // Current month revenue (all bookings this month)
+  // Current month revenue + bookings count
   const now = new Date();
-  const thisMonthRevenue = Object.entries(bookings).reduce((sum,[key,b]) => {
+  const { thisMonthRevenue, thisMonthBookings } = Object.entries(bookings).reduce((acc,[key,b]) => {
     const [day,roomId]=key.split("_"); const dt=new Date(day+"T12:00:00");
-    if (dt.getMonth()!==now.getMonth()||dt.getFullYear()!==now.getFullYear()) return sum;
-    return sum+hourlyRateFor(parseInt(roomId),b.profId,b.name)*(b.duration??1);
-  },0);
+    if (dt.getMonth()!==now.getMonth()||dt.getFullYear()!==now.getFullYear()) return acc;
+    return { thisMonthRevenue: acc.thisMonthRevenue+hourlyRateFor(parseInt(roomId),b.profId,b.name)*(b.duration??1), thisMonthBookings: acc.thisMonthBookings+1 };
+  },{ thisMonthRevenue:0, thisMonthBookings:0 });
+
+  // Current month expenses (financeiro "pagar" entries)
+  const thisMonthExpenses = financeiro.filter(f => {
+    if (f.tipo!=="pagar") return false;
+    const d=new Date(f.vencimento+"T12:00:00");
+    return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+  }).reduce((s,f)=>s+(parseFloat(f.valor)||0),0);
+
+  // New professionals registered this month
+  const newProfsThisMonth = professionals.filter(p => {
+    if (!p.createdAt) return false;
+    const d=new Date(p.createdAt);
+    return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+  }).length;
 
   const NAV = [
     ["dashboard","📊","Dashboard"],["agenda","📅","Agenda"],["profissionais","👤","Profissionais"],
@@ -418,26 +432,77 @@ function AppInner({ onLogout }) {
 
             {/* KPI row */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:28 }}>
-              {[
-                { label:"Reservas hoje", val:todayReserved, sub:`de ${totalSlots} slots disponíveis`, icon:"📅", accent:"#72816A", bg:"#EDF0EB" },
-                { label:"Receita do mês", val:`R$ ${thisMonthRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}`, sub:`${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`, icon:"💰", accent:"#72816A", bg:"#f0f7f2" },
-                { label:"Profissionais", val:professionals.length, sub:"cadastrados no sistema", icon:"👤", accent:"#5a9baa", bg:"#EEF5F7" },
-                { label:"Salas ativas", val:rooms.length, sub:"disponíveis para locação", icon:"🏢", accent:"#5a9baa", bg:"#EEF5F7" },
-              ].map(c=>(
-                <div key={c.label} className="kpi-card" style={{ background:c.bg, border:`1.5px solid ${c.accent}20` }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                    <div style={{ fontSize:11, fontWeight:700, color:c.accent, textTransform:"uppercase", letterSpacing:1 }}>{c.label}</div>
-                    <div style={{ fontSize:22 }}>{c.icon}</div>
-                  </div>
-                  <div style={{ fontSize:28, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{c.val}</div>
-                  <div style={{ fontSize:12, color:"#596850", marginTop:6 }}>{c.sub}</div>
-                  {c.label==="Reservas hoje" && totalSlots>0 && (
-                    <div style={{ marginTop:10, background:"#EDE4D8", borderRadius:4, height:5 }}>
-                      <div style={{ width:`${Math.round((todayReserved/totalSlots)*100)}%`, height:"100%", background:c.accent, borderRadius:4, transition:"width .4s" }} />
-                    </div>
-                  )}
+              {/* Reservas */}
+              <div className="kpi-card" style={{ background:"#EDF0EB", border:"1.5px solid #72816A20" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#72816A", textTransform:"uppercase", letterSpacing:1 }}>Reservas</div>
+                  <div style={{ fontSize:22 }}>📅</div>
                 </div>
-              ))}
+                <div style={{ display:"flex", alignItems:"flex-end", gap:16 }}>
+                  <div>
+                    <div style={{ fontSize:10, color:"#8a9a7a", fontWeight:600, textTransform:"uppercase", letterSpacing:.8 }}>Hoje</div>
+                    <div style={{ fontSize:28, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{todayReserved}</div>
+                  </div>
+                  <div style={{ width:1, height:36, background:"#C8B8A0", flexShrink:0 }} />
+                  <div>
+                    <div style={{ fontSize:10, color:"#8a9a7a", fontWeight:600, textTransform:"uppercase", letterSpacing:.8 }}>No mês</div>
+                    <div style={{ fontSize:28, fontWeight:800, color:"#535E43", lineHeight:1 }}>{thisMonthBookings}</div>
+                  </div>
+                </div>
+                <div style={{ marginTop:10, background:"#EDE4D8", borderRadius:4, height:5 }}>
+                  <div style={{ width:totalSlots>0?`${Math.round((todayReserved/totalSlots)*100)}%`:"0%", height:"100%", background:"#72816A", borderRadius:4, transition:"width .4s" }} />
+                </div>
+                <div style={{ fontSize:11, color:"#596850", marginTop:5 }}>{totalSlots} slots disponíveis hoje</div>
+              </div>
+
+              {/* Receita + Despesas */}
+              <div className="kpi-card" style={{ background:"#f0f7f2", border:"1.5px solid #4a7c5920" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#4a7c59", textTransform:"uppercase", letterSpacing:1 }}>Financeiro do mês</div>
+                  <div style={{ fontSize:22 }}>💰</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:10, color:"#8a9a7a", fontWeight:600, textTransform:"uppercase", letterSpacing:.8 }}>Receita</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:"#4a7c59", lineHeight:1.2 }}>R$ {thisMonthRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                </div>
+                <div style={{ marginTop:8, paddingTop:8, borderTop:"1px solid #EDE4D8" }}>
+                  <div style={{ fontSize:10, color:"#8a9a7a", fontWeight:600, textTransform:"uppercase", letterSpacing:.8 }}>Despesas</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:"#b85c50", lineHeight:1.2 }}>R$ {thisMonthExpenses.toLocaleString("pt-BR",{minimumFractionDigits:2})}</div>
+                </div>
+                <div style={{ fontSize:11, color:"#596850", marginTop:6 }}>{MONTH_NAMES[now.getMonth()]} {now.getFullYear()}</div>
+              </div>
+
+              {/* Profissionais */}
+              <div className="kpi-card" style={{ background:"#EEF5F7", border:"1.5px solid #5a9baa20" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#5a9baa", textTransform:"uppercase", letterSpacing:1 }}>Profissionais</div>
+                  <div style={{ fontSize:22 }}>👤</div>
+                </div>
+                <div style={{ display:"flex", alignItems:"flex-end", gap:16 }}>
+                  <div>
+                    <div style={{ fontSize:10, color:"#8a9a7a", fontWeight:600, textTransform:"uppercase", letterSpacing:.8 }}>Total</div>
+                    <div style={{ fontSize:28, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{professionals.length}</div>
+                  </div>
+                  {newProfsThisMonth>0 && <>
+                    <div style={{ width:1, height:36, background:"#C8B8A0", flexShrink:0 }} />
+                    <div>
+                      <div style={{ fontSize:10, color:"#8a9a7a", fontWeight:600, textTransform:"uppercase", letterSpacing:.8 }}>Novos</div>
+                      <div style={{ fontSize:28, fontWeight:800, color:"#5a9baa", lineHeight:1 }}>+{newProfsThisMonth}</div>
+                    </div>
+                  </>}
+                </div>
+                <div style={{ fontSize:11, color:"#596850", marginTop:8 }}>cadastrados no sistema</div>
+              </div>
+
+              {/* Salas */}
+              <div className="kpi-card" style={{ background:"#EEF5F7", border:"1.5px solid #5a9baa20" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#5a9baa", textTransform:"uppercase", letterSpacing:1 }}>Salas ativas</div>
+                  <div style={{ fontSize:22 }}>🏢</div>
+                </div>
+                <div style={{ fontSize:28, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{rooms.length}</div>
+                <div style={{ fontSize:11, color:"#596850", marginTop:8 }}>disponíveis para locação</div>
+              </div>
             </div>
 
             {/* Two-column: today schedule + rooms status */}
