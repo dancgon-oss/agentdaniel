@@ -69,7 +69,13 @@ const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
 const FIN_CATS_REC = ["Sublocação de sala", "Consulta avulsa", "Pacote mensal", "Outros"];
 const FIN_CATS_PAG = ["Aluguel", "Energia / Água", "Internet", "Material de escritório", "Manutenção", "Impostos / Taxas", "Salário / Comissão", "Outros"];
 
-function toKey(date) { return typeof date === "string" ? date : date.toISOString().split("T")[0]; }
+function toKey(date) {
+  if (typeof date === "string") return date;
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,"0");
+  const d = String(date.getDate()).padStart(2,"0");
+  return `${y}-${m}-${d}`;
+}
 function getWeekStart(d) { const dt = new Date(d); const day = dt.getDay(); dt.setDate(dt.getDate() - (day === 0 ? 6 : day - 1)); return dt; }
 function addDays(d, n) { const dt = new Date(d); dt.setDate(dt.getDate() + n); return dt; }
 function addMonths(d, n) { const dt = new Date(d); dt.setMonth(dt.getMonth() + n); return dt; }
