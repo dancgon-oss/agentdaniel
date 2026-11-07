@@ -246,6 +246,37 @@ function AppInner({ onLogout }) {
           const cfg = {}; cfgRows.forEach(r => { cfg[r.key] = r.value; });
           if (cfg.pix) setConfig(cfg.pix);
         }
+
+        // Auto-migrate: if Supabase is empty but localStorage has data, push it up
+        const sbEmpty = (!bkRows || bkRows.length === 0) && (!profRows || profRows.length === 0);
+        if (sbEmpty) {
+          const localBk = load(STORAGE_KEYS.bookings) || {};
+          const localProfs = load(STORAGE_KEYS.professionals) || [];
+          const localRooms = load(STORAGE_KEYS.rooms) || [];
+          const localPrices = load(STORAGE_KEYS.prices) || {};
+          const localFin = load(STORAGE_KEYS.financeiro) || [];
+          const localCfg = load(STORAGE_KEYS.config) || {};
+          const hasBk = Object.keys(localBk).length > 0;
+          const hasProfs = localProfs.length > 0;
+          if (hasBk || hasProfs) {
+            try {
+              const bkR = Object.entries(localBk).map(([key,b])=>({ key, day:key.split("_")[0], room_id:parseInt(key.split("_")[1]), hour:key.split("_")[2], name:b.name, prof_id:b.profId||null, specialty:b.specialty||null, status:b.status||"confirmed", duration:b.duration||1, obs:b.obs||null }));
+              const profR = localProfs.map(p=>({id:p.id,name:p.name,specialty:p.specialty||null,phone:p.phone||null,email:p.email||null,crp:p.crp||null,hourly_rate:p.hourlyRate??null,created_at:p.createdAt||new Date().toISOString()}));
+              const roomR = localRooms.map(r=>({id:r.id,name:r.name,color:r.color||"#72816A"}));
+              const priceR = Object.entries(localPrices).map(([room_id,value])=>({room_id:parseInt(room_id),value:parseFloat(value)||0}));
+              const finR = localFin.map(f=>({id:f.id,tipo:f.tipo,descricao:f.descricao||"",valor:parseFloat(f.valor)||0,vencimento:f.vencimento||"",categoria:f.categoria||"",status:f.status||"pendente",obs:f.obs||null}));
+              await Promise.all([
+                bkR.length && sb.from("bookings").upsert(bkR,{onConflict:"key"}),
+                profR.length && sb.from("professionals").upsert(profR,{onConflict:"id"}),
+                roomR.length && sb.from("rooms").upsert(roomR,{onConflict:"id"}),
+                priceR.length && sb.from("prices").upsert(priceR,{onConflict:"room_id"}),
+                finR.length && sb.from("financeiro").upsert(finR,{onConflict:"id"}),
+                sb.from("config").upsert([{key:"pix",value:localCfg}],{onConflict:"key"}),
+              ].filter(Boolean));
+              console.log(`Auto-migrated to Supabase: ${bkR.length} bookings, ${profR.length} professionals`);
+            } catch(e) { console.warn("Auto-migration failed:", e); }
+          }
+        }
       } catch(e) { console.warn("Supabase load failed, using localStorage", e); }
       setSbReady(true);
     }
