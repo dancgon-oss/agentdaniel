@@ -247,9 +247,9 @@ function AppInner({ onLogout }) {
           if (cfg.pix) setConfig(cfg.pix);
         }
 
-        // Auto-migrate: if Supabase is empty but localStorage has data, push it up
-        const sbEmpty = (!bkRows || bkRows.length === 0) && (!profRows || profRows.length === 0);
-        if (sbEmpty) {
+        // Auto-migrate: if Supabase has no bookings but localStorage does, push everything up
+        const sbHasNoBookings = !bkRows || bkRows.length === 0;
+        if (sbHasNoBookings) {
           const localBk = load(STORAGE_KEYS.bookings) || {};
           const localProfs = load(STORAGE_KEYS.professionals) || [];
           const localRooms = load(STORAGE_KEYS.rooms) || [];
