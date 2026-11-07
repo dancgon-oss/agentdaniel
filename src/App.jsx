@@ -1056,11 +1056,36 @@ function AppInner({ onLogout }) {
 
           {/* ── BACKUP / SYNC ── */}
           <div style={{ background:"#fff", borderRadius:16, border:"1px solid #C8B8A0", padding:24, maxWidth:480, boxShadow:"0 1px 4px rgba(0,0,0,.04)", marginBottom:24 }}>
-            <div style={{ fontSize:15, fontWeight:700, color:"#1a2010", marginBottom:4 }}>📱 Sincronizar entre dispositivos</div>
+            <div style={{ fontSize:15, fontWeight:700, color:"#1a2010", marginBottom:4 }}>☁️ Sincronização em nuvem</div>
             <div style={{ fontSize:12, color:"#8a9a7a", marginBottom:20, lineHeight:1.6 }}>
-              Os dados ficam salvos no navegador de cada aparelho. Use os botões abaixo para exportar no computador e importar no celular (ou vice-versa).
+              Os dados sincronizam automaticamente entre todos os dispositivos via Supabase. Use <strong style={{color:"#72816A"}}>"Enviar para a nuvem"</strong> se tiver dados locais que ainda não subiram.
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <button className="btn" onClick={async ()=>{
+                showToast("Enviando dados para a nuvem...");
+                try {
+                  const bk = Object.entries(bookings).map(([key,b])=>({ key, day:key.split("_")[0], room_id:parseInt(key.split("_")[1]), hour:key.split("_")[2], name:b.name, prof_id:b.profId||null, specialty:b.specialty||null, status:b.status||"confirmed", duration:b.duration||1, obs:b.obs||null }));
+                  const profs = professionals.map(p=>({id:p.id,name:p.name,specialty:p.specialty||null,phone:p.phone||null,email:p.email||null,crp:p.crp||null,hourly_rate:p.hourlyRate??null,created_at:p.createdAt||new Date().toISOString()}));
+                  const rms = rooms.map(r=>({id:r.id,name:r.name,color:r.color||"#72816A"}));
+                  const prs = Object.entries(prices).map(([room_id,value])=>({room_id:parseInt(room_id),value:parseFloat(value)||0}));
+                  const fin = financeiro.map(f=>({id:f.id,tipo:f.tipo,descricao:f.descricao||"",valor:parseFloat(f.valor)||0,vencimento:f.vencimento||"",categoria:f.categoria||"",status:f.status||"pendente",obs:f.obs||null}));
+                  await Promise.all([
+                    bk.length && sb.from("bookings").upsert(bk,{onConflict:"key"}),
+                    profs.length && sb.from("professionals").upsert(profs,{onConflict:"id"}),
+                    rms.length && sb.from("rooms").upsert(rms,{onConflict:"id"}),
+                    prs.length && sb.from("prices").upsert(prs,{onConflict:"room_id"}),
+                    fin.length && sb.from("financeiro").upsert(fin,{onConflict:"id"}),
+                    sb.from("config").upsert([{key:"pix",value:config}],{onConflict:"key"}),
+                  ].filter(Boolean));
+                  showToast(`Dados enviados para a nuvem! ${bk.length} reservas, ${profs.length} profissionais.`);
+                } catch(e) { showToast("Erro ao enviar. Verifique a conexão.","err"); }
+              }} style={{ background:"linear-gradient(135deg,#535E43,#72816A)", color:"#fff", border:"none", borderRadius:12, padding:"13px 20px", fontSize:14, fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:20 }}>☁️</span>
+                <div>
+                  <div>Enviar dados locais para a nuvem</div>
+                  <div style={{ fontSize:11, fontWeight:400, opacity:.85 }}>Sincroniza este dispositivo → Supabase → todos os outros</div>
+                </div>
+              </button>
               <button className="btn" onClick={()=>{
                 const data = {};
                 Object.entries(STORAGE_KEYS).forEach(([k,sk])=>{ const v=localStorage.getItem(sk); if(v) data[sk]=JSON.parse(v); });
