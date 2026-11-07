@@ -178,6 +178,14 @@ function AppInner({ onLogout }) {
   const [profSearch, setProfSearch] = useState("");
   const [reportProfFilter, setReportProfFilter] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" && window.innerWidth < 768);
+
+  useEffect(() => {
+    const check = () => { const m = window.innerWidth < 768; setIsMobile(m); if (m) setSidebarOpen(false); };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const weekDays = getWeekDays(currentDate);
   useEffect(() => { save(STORAGE_KEYS.bookings, bookings); }, [bookings]);
@@ -425,10 +433,23 @@ function AppInner({ onLogout }) {
         .nav-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600;}
         .kpi-card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid #C8B8A0;}
         .day-pill:hover{background:#C8B8A0 !important;}
+        .bottom-nav{display:none;}
+        @media(max-width:767px){
+          .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:linear-gradient(180deg,#1a2010,#2d3c20);border-top:1px solid rgba(255,255,255,.1);z-index:800;padding:0;}
+          .bottom-nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 14px;background:none;border:none;color:#8a9a7a;font-size:9px;font-family:'Outfit',sans-serif;cursor:pointer;gap:3px;transition:color .15s;}
+          .bottom-nav button.active{color:#fff;}
+          .bottom-nav button span.ico{font-size:20px;}
+          .page-content{padding:16px 14px 80px !important;}
+          .kpi-card{padding:16px !important;}
+          .mobile-scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+          .hide-mobile{display:none !important;}
+          .modal-inner{width:100% !important;max-width:100vw !important;border-radius:16px 16px 0 0 !important;position:fixed !important;bottom:0 !important;left:0 !important;right:0 !important;top:auto !important;max-height:92vh !important;overflow-y:auto !important;}
+          .modal-wrap{align-items:flex-end !important;}
+        }
       `}</style>
 
       {/* ── SIDEBAR ── */}
-      <div style={{ width:sidebarOpen?240:64, background:"linear-gradient(180deg,#1a2010 0%,#2d3c20 100%)", display:"flex", flexDirection:"column", flexShrink:0, transition:"width .2s", overflow:"hidden" }}>
+      <div style={{ width:isMobile?0:(sidebarOpen?240:64), background:"linear-gradient(180deg,#1a2010 0%,#2d3c20 100%)", display:isMobile?"none":"flex", flexDirection:"column", flexShrink:0, transition:"width .2s", overflow:"hidden" }}>
         {/* Logo */}
         <div style={{ padding:"24px 16px 20px", borderBottom:"1px solid rgba(255,255,255,.08)" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -467,7 +488,7 @@ function AppInner({ onLogout }) {
 
         {/* ══ DASHBOARD ══ */}
         {tab==="dashboard" && (
-          <div style={{ padding:"32px 32px", maxWidth:1200 }} className="fade-up">
+          <div style={{ padding:"32px 32px", maxWidth:1200 }} className="fade-up page-content">
             <div style={{ marginBottom:28 }}>
               <h1 style={{ fontSize:26, fontWeight:800, color:"#1a2010", letterSpacing:"-.5px" }}>Painel de Controle</h1>
               <div style={{ fontSize:14, color:"#596850", marginTop:4 }}>
@@ -476,7 +497,7 @@ function AppInner({ onLogout }) {
             </div>
 
             {/* KPI — grid 3 colunas × 2 linhas, cards idênticos */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:28 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:14, marginBottom:28 }}>
               {[
                 { label:"Reservas hoje",   val:todayReserved,    sub:`${totalSlots} slots disponíveis`, accent:"#72816A", bg:"#EDF0EB", bar:true },
                 { label:"Receita do mês",  val:`R$ ${thisMonthRevenue.toLocaleString("pt-BR",{minimumFractionDigits:2})}`, sub:`${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`, accent:"#4a7c59", bg:"#f0f7f2" },
@@ -574,9 +595,9 @@ function AppInner({ onLogout }) {
 
         {/* ══ AGENDA ══ */}
         {tab==="agenda" && (
-          <div style={{ display:"flex", height:"100vh" }}>
+          <div style={{ display:"flex", height:isMobile?"auto":"100vh", flexDirection:isMobile?"column":"row" }}>
             {/* Mini sidebar */}
-            <div style={{ width:200, background:"#fff", borderRight:"1px solid #C8B8A0", padding:16, display:"flex", flexDirection:"column", gap:16, overflowY:"auto", flexShrink:0 }}>
+            <div style={{ width:isMobile?"100%":200, background:"#fff", borderRight:isMobile?"none":"1px solid #C8B8A0", borderBottom:isMobile?"1px solid #C8B8A0":"none", padding:isMobile?"12px 14px":16, display:"flex", flexDirection:isMobile?"row":"column", gap:isMobile?16:16, overflowY:"auto", flexShrink:0, flexWrap:isMobile?"wrap":"nowrap" }}>
               <div>
                 <div style={sectionLabel}>Hoje</div>
                 <div style={{ fontSize:30, fontWeight:800, color:"#1a2010", lineHeight:1 }}>{todayReserved}</div>
@@ -685,10 +706,10 @@ function AppInner({ onLogout }) {
               </div>}
 
               {/* Room headers */}
-              {viewMode!=="month" && <div style={{ display:"flex", background:"#F8F4EF", borderBottom:"1px solid #C8B8A0", flexShrink:0, position:"sticky", top:0, zIndex:5 }}>
+              {viewMode!=="month" && <div style={{ display:"flex", background:"#F8F4EF", borderBottom:"1px solid #C8B8A0", flexShrink:0, position:"sticky", top:0, zIndex:5, minWidth:isMobile?`${52+rooms.length*120}px`:"auto" }}>
                 <div style={{ width:52, flexShrink:0, borderRight:"1px solid #C8B8A0" }} />
                 {rooms.map(r=>(
-                  <div key={r.id} style={{ flex:1, padding:"8px 12px", borderRight:"1px solid #C8B8A0", display:"flex", alignItems:"center", gap:7, minWidth:viewMode==="week"?80:140 }}>
+                  <div key={r.id} style={{ flex:1, padding:"8px 12px", borderRight:"1px solid #C8B8A0", display:"flex", alignItems:"center", gap:7, minWidth:isMobile?120:(viewMode==="week"?80:140) }}>
                     <div style={{ width:10, height:10, borderRadius:3, background:r.color, flexShrink:0 }} />
                     <span style={{ fontSize:13, fontWeight:700, color:"#2a3820" }}>{r.name}</span>
                   </div>
@@ -696,7 +717,7 @@ function AppInner({ onLogout }) {
               </div>}
 
               {/* Slots */}
-              {viewMode!=="month" && <div style={{ overflowY:"auto" }}>
+              {viewMode!=="month" && <div style={{ overflowY:"auto", minWidth:isMobile?`${52+rooms.length*120}px`:"auto" }}>
                 {displayDays.map(day=>{
                   const ds=toKey(day);
                   return (
@@ -752,7 +773,7 @@ function AppInner({ onLogout }) {
 
         {/* ══ PROFISSIONAIS ══ */}
         {tab==="profissionais" && (
-          <div style={{ padding:"32px 32px", maxWidth:1100 }} className="fade-up">
+          <div style={{ padding:"32px 32px", maxWidth:1100 }} className="fade-up page-content">
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
               <div>
                 <h2 style={{ fontSize:24, fontWeight:800, color:"#1a2010" }}>Profissionais</h2>
@@ -786,7 +807,7 @@ function AppInner({ onLogout }) {
 
         {/* ══ RELATÓRIO ══ */}
         {tab==="relatorio" && (
-          <div style={{ padding:"32px 32px", maxWidth:1100 }} className="fade-up">
+          <div style={{ padding:"32px 32px", maxWidth:1100 }} className="fade-up page-content">
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24, flexWrap:"wrap", gap:12 }}>
               <div>
                 <h2 style={{ fontSize:24, fontWeight:800, color:"#1a2010" }}>Relatório de Faturamento</h2>
@@ -851,8 +872,8 @@ function AppInner({ onLogout }) {
             {reportData.rows.length===0 ? (
               <div style={{ textAlign:"center", padding:"60px 0", color:"#8a9a7a" }}><div style={{ fontSize:40 }}>📋</div><div style={{ fontSize:14, marginTop:8 }}>Nenhuma reserva neste período</div></div>
             ) : (
-              <div style={{ background:"#fff", borderRadius:16, border:"1px solid #C8B8A0", overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.05)" }}>
-                <table style={{ width:"100%", borderCollapse:"collapse" }}>
+              <div style={{ background:"#fff", borderRadius:16, border:"1px solid #C8B8A0", overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.05)" }} className="mobile-scroll-x">
+                <table style={{ width:"100%", borderCollapse:"collapse", minWidth:600 }}>
                   <thead><tr style={{ background:"#FBF7F2" }}>
                     {["Data","Horário","Dur.","Sala","Profissional","Especialidade","Status","Valor"].map(h=>(
                       <th key={h} style={{ padding:"12px 14px", textAlign:"left", fontSize:11, color:"#8a9a7a", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, borderBottom:"1px solid #C8B8A0" }}>{h}</th>
@@ -899,7 +920,7 @@ function AppInner({ onLogout }) {
 
         {/* ══ CONFIGURAÇÕES ══ */}
         {tab==="configuracoes" && (
-          <div style={{ padding:"32px 32px", maxWidth:860 }} className="fade-up">
+          <div style={{ padding:"32px 32px", maxWidth:860 }} className="fade-up page-content">
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
               <div>
                 <h2 style={{ fontSize:24, fontWeight:800, color:"#1a2010" }}>Configurações</h2>
@@ -1181,6 +1202,22 @@ function AppInner({ onLogout }) {
       )}
 
       {/* Toast */}
+      {/* ── BOTTOM NAV (mobile) ── */}
+      {isMobile && (
+        <nav className="bottom-nav">
+          {NAV.map(([id,icon,label])=>(
+            <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>
+              <span className="ico">{icon}</span>
+              <span>{label}</span>
+            </button>
+          ))}
+          <button onClick={onLogout}>
+            <span className="ico">🔒</span>
+            <span>Sair</span>
+          </button>
+        </nav>
+      )}
+
       {/* ── MODAL REPLICAR MÊS ── */}
       {replicaModal && (() => {
         const { fromMonth, fromYear, toMonth, toYear } = replicaModal;
@@ -1406,7 +1443,7 @@ function CobrancaTab({ bookings, professionals, rooms, prices, hourlyRateFor, co
   }
 
   return (
-    <div style={{ padding:"32px 32px", maxWidth:960 }} className="fade-up">
+    <div style={{ padding:"32px 32px", maxWidth:960 }} className="fade-up page-content">
       <div style={{ marginBottom:28 }}>
         <h2 style={{ fontSize:24, fontWeight:800, color:"#1a2010" }}>Cobrança Mensal</h2>
         <div style={{ fontSize:14, color:"#596850", marginTop:2 }}>Gere cobranças com QR Code PIX e envie via WhatsApp</div>
@@ -1623,7 +1660,7 @@ function FinanceiroTab({ financeiro, setFinanceiro, bookings, professionals, roo
         <div style={{ textAlign:"center", padding:"60px 0", color:"#8a9a7a" }}><div style={{ fontSize:40 }}>💰</div><div style={{ fontSize:14, marginTop:8 }}>Nenhum lançamento encontrado</div></div>
       ) : (
         <div style={{ background:"#fff", borderRadius:16, border:"1px solid #C8B8A0", overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.05)" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", minWidth:600 }}>
             <thead><tr style={{ background:"#FBF7F2" }}>
               {["Tipo","Descrição","Categoria","Vencimento","Valor","Status",""].map(h=>(
                 <th key={h} style={{ padding:"12px 14px", textAlign:"left", fontSize:11, color:"#8a9a7a", fontWeight:700, textTransform:"uppercase", letterSpacing:.8, borderBottom:"1px solid #C8B8A0" }}>{h}</th>
@@ -1764,10 +1801,11 @@ function ChangePasswordSection() {
 
 // ─── Shared components ────────────────────────────────────────────────────────
 function ModalOverlay({ children, onClose, small }) {
+  const mobile = typeof window!=="undefined" && window.innerWidth < 768;
   return (
-    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.6)", display:"flex", alignItems:"flex-start", justifyContent:"center", zIndex:200, overflowY:"auto", padding:"32px 16px" }}>
-      <div onClick={e=>e.stopPropagation()}
-        style={{ background:"#fff", borderRadius:20, padding:28, width:small?330:480, maxWidth:"100%", boxShadow:"0 24px 60px rgba(0,0,0,.2)", border:"1px solid #C8B8A0", animation:"fadeUp .2s ease", margin:"auto" }}>
+    <div onClick={onClose} className="modal-wrap" style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.6)", display:"flex", alignItems:mobile?"flex-end":"flex-start", justifyContent:"center", zIndex:200, overflowY:mobile?"visible":"auto", padding:mobile?0:"32px 16px" }}>
+      <div onClick={e=>e.stopPropagation()} className="modal-inner"
+        style={{ background:"#fff", borderRadius:mobile?"20px 20px 0 0":20, padding:28, width:small?330:480, maxWidth:"100%", boxShadow:"0 24px 60px rgba(0,0,0,.2)", border:"1px solid #C8B8A0", animation:"fadeUp .2s ease", margin:mobile?0:"auto", maxHeight:mobile?"92vh":"none", overflowY:mobile?"auto":"visible" }}>
         {children}
       </div>
     </div>
