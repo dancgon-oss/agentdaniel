@@ -985,6 +985,57 @@ function AppInner({ onLogout }) {
             </div>
           </div>
 
+          {/* ── BACKUP / SYNC ── */}
+          <div style={{ background:"#fff", borderRadius:16, border:"1px solid #C8B8A0", padding:24, maxWidth:480, boxShadow:"0 1px 4px rgba(0,0,0,.04)", marginBottom:24 }}>
+            <div style={{ fontSize:15, fontWeight:700, color:"#1a2010", marginBottom:4 }}>📱 Sincronizar entre dispositivos</div>
+            <div style={{ fontSize:12, color:"#8a9a7a", marginBottom:20, lineHeight:1.6 }}>
+              Os dados ficam salvos no navegador de cada aparelho. Use os botões abaixo para exportar no computador e importar no celular (ou vice-versa).
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <button className="btn" onClick={()=>{
+                const data = {};
+                Object.entries(STORAGE_KEYS).forEach(([k,sk])=>{ const v=localStorage.getItem(sk); if(v) data[sk]=JSON.parse(v); });
+                const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                const now = new Date();
+                a.href=url; a.download=`espaco-psi-backup-${toKey(now)}.json`; a.click(); URL.revokeObjectURL(url);
+                showToast("Backup exportado com sucesso!");
+              }} style={{ background:"linear-gradient(135deg,#535E43,#72816A)", color:"#fff", border:"none", borderRadius:12, padding:"13px 20px", fontSize:14, fontWeight:700, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:20 }}>⬇️</span>
+                <div>
+                  <div>Exportar backup</div>
+                  <div style={{ fontSize:11, fontWeight:400, opacity:.85 }}>Baixa um arquivo .json com todos os dados</div>
+                </div>
+              </button>
+              <label style={{ background:"#F5EFE5", border:"1.5px dashed #C8B8A0", borderRadius:12, padding:"13px 20px", fontSize:14, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:10, color:"#2a3820" }}>
+                <span style={{ fontSize:20 }}>⬆️</span>
+                <div>
+                  <div>Importar backup</div>
+                  <div style={{ fontSize:11, fontWeight:400, color:"#8a9a7a" }}>Selecione o arquivo .json exportado</div>
+                </div>
+                <input type="file" accept=".json" style={{ display:"none" }} onChange={e=>{
+                  const file = e.target.files?.[0]; if(!file) return;
+                  const reader = new FileReader();
+                  reader.onload = ev => {
+                    try {
+                      const data = JSON.parse(ev.target.result);
+                      let count=0;
+                      Object.entries(data).forEach(([k,v])=>{ localStorage.setItem(k,JSON.stringify(v)); count++; });
+                      showToast(`Dados importados! Recarregando...`,"ok");
+                      setTimeout(()=>window.location.reload(),1200);
+                    } catch(err) { showToast("Arquivo inválido. Use um backup gerado por este sistema.","err"); }
+                  };
+                  reader.readAsText(file);
+                  e.target.value="";
+                }} />
+              </label>
+              <div style={{ background:"#FBF7F2", border:"1px solid #EDE4D8", borderRadius:10, padding:"10px 14px", fontSize:12, color:"#8a9a7a", lineHeight:1.6 }}>
+                💡 <strong style={{ color:"#596850" }}>Dica:</strong> Para usar em vários dispositivos, exporte no computador → abra o arquivo no celular → importe. Os dados mais recentes sempre sobrescrevem os anteriores.
+              </div>
+            </div>
+          </div>
+
           <ChangePasswordSection />
           </div>
         )}
